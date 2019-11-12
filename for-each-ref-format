@@ -1,0 +1,1 @@
+git for-each-ref --shell --format "%(objectname) %(objecttype) %(refname) %(upstream) %(upstream:remotename) %(upstream:track) %(creator)"
