@@ -1,7 +1,7 @@
 extern crate nom;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take, take_till1, take_while, take_while_m_n},
+    bytes::complete::{tag, take, take_while},
     character::complete::one_of,
     combinator::{map, map_res},
     multi::{count,many0},
@@ -12,145 +12,10 @@ use std::array::TryFromSliceError;
 use std::convert::TryFrom;
 use std::ffi::OsString;
 
-#[derive(Debug, PartialEq)]
-struct Mode([u8; 6]);
-
-impl TryFrom<Vec<u8>> for Mode {
-    type Error = TryFromSliceError;
-    fn try_from(v: Vec<u8>) -> Result<Mode, TryFromSliceError> {
-        Ok(Mode(<[u8; 6]>::try_from(&v[..])?))
-    }
-}
-
-fn from_octal(input: &str) -> Result<u8, std::num::ParseIntError> {
-    u8::from_str_radix(input, 8)
-}
-
-fn octal(input: &str) -> IResult<&str, u8> {
-    map_res(take(1u8), from_octal)(input)
-}
-
-fn mode(input: &str) -> IResult<&str, Mode> {
-    map_res(count(octal, 6), Mode::try_from)(input)
-}
-
-fn is_hex_digit(c: char) -> bool {
-    c.is_digit(16)
-}
-
-fn sha(input: &str) -> IResult<&str, &str> {
-    take_while_m_n(40, 40, is_hex_digit)(input)
-}
+use super::{sha,filepath,settle_parse_result};
 
 #[derive(Debug, PartialEq)]
-enum Status {
-    Unmodified,
-    Modified,
-    Added,
-    Deleted,
-    Renamed,
-    Copied,
-    Unmerged,
-    Untracked,
-    Ignored,
-}
-
-fn status(input: &str) -> IResult<&str, Status> {
-    take(1u8)(input).and_then(|parsed| match parsed {
-        (i, ".") => Ok((i, Status::Unmodified)),
-        (i, "M") => Ok((i, Status::Modified)),
-        (i, "A") => Ok((i, Status::Added)),
-        (i, "D") => Ok((i, Status::Deleted)),
-        (i, "R") => Ok((i, Status::Renamed)),
-        (i, "C") => Ok((i, Status::Copied)),
-        (i, "U") => Ok((i, Status::Unmerged)),
-        (i, "?") => Ok((i, Status::Untracked)),
-        (i, "!") => Ok((i, Status::Ignored)),
-
-        (i, _) => Err(nom::Err::Error((i, nom::error::ErrorKind::OneOf))),
-    })
-}
-
-#[derive(Debug, PartialEq)]
-struct StatusPair {
-    staged: Status,
-    unstaged: Status,
-}
-
-impl From<(Status, Status)> for StatusPair {
-    fn from(t: (Status, Status)) -> StatusPair {
-        let (staged, unstaged) = t;
-        StatusPair { staged, unstaged }
-    }
-}
-
-fn status_pair(input: &str) -> IResult<&str, StatusPair> {
-    map(tuple((status, status)), StatusPair::from)(input)
-}
-
-#[derive(Debug, PartialEq)]
-enum SubmoduleStatus {
-    Not,
-    Is(bool, bool, bool),
-}
-
-fn submodule_status_flag<I>(pattern: &'static str) -> impl Fn(I) -> IResult<I, bool>
-where
-    I: nom::InputIter<Item = char> + nom::Slice<std::ops::RangeFrom<usize>>,
-{
-    map(one_of(pattern), |c| !(c == '.'))
-}
-
-fn submodule_status(input: &str) -> IResult<&str, SubmoduleStatus> {
-    let (i, s) = one_of("NS")(input)?;
-    match s {
-        'N' => map(count(one_of("."), 3), |_| SubmoduleStatus::Not)(i),
-        'S' => map(
-            tuple((
-                submodule_status_flag("C."),
-                submodule_status_flag("M."),
-                submodule_status_flag("U."),
-            )),
-            |(c, m, u)| SubmoduleStatus::Is(c, m, u),
-        )(i),
-        _ => panic!("one_of violated contract"),
-    }
-}
-
-fn end_of_path(input: char) -> bool {
-    match input {
-        '\t' | '\n' => true,
-        _ => false,
-    }
-}
-
-fn filepath(input: &str) -> IResult<&str, OsString> {
-    map(take_till1(end_of_path), OsString::from)(input)
-}
-
-#[derive(Debug, PartialEq)]
-enum ChangeScore {
-    Rename(u8),
-    Copy(u8),
-}
-
-fn tagged_score<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, &str> {
-    preceded(tag(pattern), take_while(|c: char| c.is_digit(10)))
-}
-
-fn change_score(input: &str) -> IResult<&str, ChangeScore> {
-    alt((
-        map_res(tagged_score("R"), |n| {
-            n.parse().map(|d| ChangeScore::Rename(d))
-        }),
-        map_res(tagged_score("C"), |n| {
-            n.parse().map(|d| ChangeScore::Copy(d))
-        }),
-    ))(input)
-}
-
-#[derive(Debug, PartialEq)]
-enum StatusLine<'a> {
+pub enum StatusLine<'a> {
     One {
         status: StatusPair,
         sub: SubmoduleStatus,
@@ -191,6 +56,128 @@ enum StatusLine<'a> {
     Ignored {
         path: OsString,
     },
+}
+
+pub fn status_lines(input: &str) -> super::Result<&str, Vec<StatusLine>> {
+    settle_parse_result(many0(terminated(status_line, tag("\n")))(input))
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Mode([u8; 6]);
+
+impl TryFrom<Vec<u8>> for Mode {
+    type Error = TryFromSliceError;
+    fn try_from(v: Vec<u8>) -> Result<Mode, TryFromSliceError> {
+        Ok(Mode(<[u8; 6]>::try_from(&v[..])?))
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Status {
+    Unmodified,
+    Modified,
+    Added,
+    Deleted,
+    Renamed,
+    Copied,
+    Unmerged,
+    Untracked,
+    Ignored,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StatusPair {
+    staged: Status,
+    unstaged: Status,
+}
+
+impl From<(Status, Status)> for StatusPair {
+    fn from(t: (Status, Status)) -> StatusPair {
+        let (staged, unstaged) = t;
+        StatusPair { staged, unstaged }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SubmoduleStatus {
+    Not,
+    Is(bool, bool, bool),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ChangeScore {
+    Rename(u8),
+    Copy(u8),
+}
+
+fn from_octal(input: &str) -> Result<u8, std::num::ParseIntError> {
+    u8::from_str_radix(input, 8)
+}
+
+fn octal(input: &str) -> IResult<&str, u8> {
+    map_res(take(1u8), from_octal)(input)
+}
+
+fn mode(input: &str) -> IResult<&str, Mode> {
+    map_res(count(octal, 6), Mode::try_from)(input)
+}
+
+fn status(input: &str) -> IResult<&str, Status> {
+    take(1u8)(input).and_then(|parsed| match parsed {
+        (i, ".") => Ok((i, Status::Unmodified)),
+        (i, "M") => Ok((i, Status::Modified)),
+        (i, "A") => Ok((i, Status::Added)),
+        (i, "D") => Ok((i, Status::Deleted)),
+        (i, "R") => Ok((i, Status::Renamed)),
+        (i, "C") => Ok((i, Status::Copied)),
+        (i, "U") => Ok((i, Status::Unmerged)),
+        (i, "?") => Ok((i, Status::Untracked)),
+        (i, "!") => Ok((i, Status::Ignored)),
+
+        (i, _) => Err(nom::Err::Error((i, nom::error::ErrorKind::OneOf))),
+    })
+}
+
+fn status_pair(input: &str) -> IResult<&str, StatusPair> {
+    map(tuple((status, status)), StatusPair::from)(input)
+}
+
+fn submodule_status_flag<I>(pattern: &'static str) -> impl Fn(I) -> IResult<I, bool>
+where
+    I: nom::InputIter<Item = char> + nom::Slice<std::ops::RangeFrom<usize>>,
+{
+    map(one_of(pattern), |c| !(c == '.'))
+}
+
+fn submodule_status(input: &str) -> IResult<&str, SubmoduleStatus> {
+    let (i, s) = one_of("NS")(input)?;
+    match s {
+        'N' => map(count(one_of("."), 3), |_| SubmoduleStatus::Not)(i),
+        'S' => map(
+            tuple((
+                submodule_status_flag("C."),
+                submodule_status_flag("M."),
+                submodule_status_flag("U."),
+            )),
+            |(c, m, u)| SubmoduleStatus::Is(c, m, u),
+        )(i),
+        _ => panic!("one_of violated contract"),
+    }
+}
+
+fn tagged_score<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, &str> {
+    preceded(tag(pattern), take_while(|c: char| c.is_digit(10)))
+}
+
+fn change_score(input: &str) -> IResult<&str, ChangeScore> {
+    alt((
+        map_res(tagged_score("R"), |n| {
+            n.parse().map(|d| ChangeScore::Rename(d))
+        }),
+        map_res(tagged_score("C"), |n| {
+            n.parse().map(|d| ChangeScore::Copy(d))
+        }),
+    ))(input)
 }
 
 fn one_file_line(input: &str) -> IResult<&str, StatusLine> {
@@ -293,17 +280,6 @@ fn status_line(input: &str) -> IResult<&str, StatusLine> {
     ))(input)
 }
 
-fn status_lines(input: &str) -> Result<Vec<StatusLine>, String> {
-    match many0(terminated(status_line, tag("\n")))(input) {
-        Ok(("", v)) => Ok(v),
-        Ok((extra, _)) => Err(format!("Trailing: {}", extra)),
-        Err(nom::Err::Error((rest, kind))) =>  Err(format!("{}: {}", kind.description(), rest)),
-        Err(nom::Err::Failure((rest, kind))) =>  Err(format!("{}: {}", kind.description(), rest)),
-        Err(nom::Err::Incomplete(nom::Needed::Size(x))) =>  Err(format!("Incomplete: needs {}", x)),
-        Err(nom::Err::Incomplete(nom::Needed::Unknown)) =>  Err(format!("Incomplete, but don't know what's needed"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -396,7 +372,7 @@ mod tests {
 
     #[test]
     fn status_lines_parse() {
-        let lines = status_lines(include_str!("../testdata/mezzo-status-2")).unwrap();
+        let lines = status_lines(include_str!("testdata/mezzo-status-2")).unwrap();
         assert_eq!(lines[0],
                    StatusLine::Two{
                        status: StatusPair{staged: Status::Renamed, unstaged: Status::Unmodified},
