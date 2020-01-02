@@ -4,7 +4,7 @@ use nom::{
     bytes::complete::{tag, take, take_while},
     character::complete::one_of,
     combinator::{map, map_res},
-    multi::{count,many0},
+    multi::{count, many0},
     sequence::{preceded, terminated, tuple},
     IResult,
 };
@@ -12,7 +12,7 @@ use std::array::TryFromSliceError;
 use std::convert::TryFrom;
 use std::ffi::OsString;
 
-use super::{sha,filepath,settle_parse_result};
+use super::{filepath, settle_parse_result, sha};
 
 #[derive(Debug, PartialEq)]
 pub enum StatusLine<'a> {
@@ -373,31 +373,41 @@ mod tests {
     #[test]
     fn status_lines_parse() {
         let lines = status_lines(include_str!("testdata/mezzo-status-2")).unwrap();
-        assert_eq!(lines[0],
-                   StatusLine::Two{
-                       status: StatusPair{staged: Status::Renamed, unstaged: Status::Unmodified},
-                       sub: SubmoduleStatus::Not,
-                       head_mode: Mode([1,0,0,6,4,4]),
-                       index_mode: Mode([1,0,0,6,4,4]),
-                       worktree_mode: Mode([1,0,0,6,4,4]),
-                       head_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea",
-                       index_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea",
-                       change_score: ChangeScore::Rename(100),
-                       path: OsString::from("README-2.md"),
-                       orig_path: OsString::from("README.md")
-                   }
-                  );
-        assert_eq!(lines[1],
-                   StatusLine::One{
-                       status: StatusPair{staged: Status::Unmodified, unstaged: Status::Modified},
-                       sub: SubmoduleStatus::Not,
-                       head_mode: Mode([1,0,0,6,4,4]),
-                       index_mode: Mode([1,0,0,6,4,4]),
-                       worktree_mode: Mode([1,0,0,6,4,4]),
-                       head_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e",
-                       index_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e",
-                       path: OsString::from("spec/transitions/service_request_transitions/fulfill_spec.rb"),
-                   }
-                  );
+        assert_eq!(
+            lines[0],
+            StatusLine::Two {
+                status: StatusPair {
+                    staged: Status::Renamed,
+                    unstaged: Status::Unmodified
+                },
+                sub: SubmoduleStatus::Not,
+                head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                head_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea",
+                index_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea",
+                change_score: ChangeScore::Rename(100),
+                path: OsString::from("README-2.md"),
+                orig_path: OsString::from("README.md")
+            }
+        );
+        assert_eq!(
+            lines[1],
+            StatusLine::One {
+                status: StatusPair {
+                    staged: Status::Unmodified,
+                    unstaged: Status::Modified
+                },
+                sub: SubmoduleStatus::Not,
+                head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                head_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e",
+                index_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e",
+                path: OsString::from(
+                    "spec/transitions/service_request_transitions/fulfill_spec.rb"
+                ),
+            }
+        );
     }
 }
