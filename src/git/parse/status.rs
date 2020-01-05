@@ -58,7 +58,7 @@ pub enum StatusLine<'a> {
     },
 }
 
-pub fn status_lines(input: &str) -> super::Result<&str, Vec<StatusLine>> {
+pub fn parse(input: &str) -> super::Result<&str, Vec<StatusLine>> {
     settle_parse_result(many0(terminated(status_line, tag("\n")))(input))
 }
 
@@ -372,7 +372,7 @@ mod tests {
 
     #[test]
     fn status_lines_parse() {
-        let lines = status_lines(include_str!("testdata/mezzo-status-2")).unwrap();
+        let lines = parse(include_str!("testdata/mezzo-status-2")).unwrap();
         assert_eq!(
             lines[0],
             StatusLine::Two {

@@ -22,7 +22,7 @@ impl From<(String, OsString)> for RefPair {
     }
 }
 
-pub fn ref_pairs(input: &str) -> super::Result<&str, Vec<RefPair>> {
+pub fn parse(input: &str) -> super::Result<&str, Vec<RefPair>> {
     settle_parse_result(many0(terminated(ref_pair, tag("\n")))(input))
 }
 
@@ -38,6 +38,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn ref_pairs_parse() {
+        let lines = parse(include_str!("testdata/mezzo-ls-remote")).unwrap();
+        assert_eq!(lines.len(), 730)
+    }
+
+    #[test]
     fn ref_pair_parse() {
         assert_eq!(
             ref_pair("d4ae7077d4ed711a10e89908ab91999ce326dfc0\trefs/heads/approvals_template"),
@@ -49,11 +55,5 @@ mod tests {
                 }
             ))
         )
-    }
-
-    #[test]
-    fn ref_pairs_parse() {
-        let lines = ref_pairs(include_str!("testdata/mezzo-ls-remote")).unwrap();
-        assert_eq!(lines.len(), 730)
     }
 }

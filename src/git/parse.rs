@@ -22,7 +22,6 @@ pub enum Err<I> {
     Failed(nom::Err<(I, nom::error::ErrorKind)>),
     Incomplete(nom::Err<(I, nom::error::ErrorKind)>),
     ParseInt(std::num::ParseIntError),
-    NoParse(),
 }
 
 impl<I: Display + Debug> Display for Err<I> {
@@ -63,6 +62,10 @@ impl<I> From<std::num::ParseIntError> for Err<I> {
         Err::ParseInt(pie)
     }
 }
+
+trait Input: AsRef<str> + Eq + Default {}
+
+impl<T> Input for T where T: AsRef<str> + Eq + Default {}
 
 type Result<I, O> = std::result::Result<O, Err<I>>;
 
