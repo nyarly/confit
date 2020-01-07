@@ -15,15 +15,15 @@ use std::ffi::OsString;
 use super::{filepath, settle_parse_result, sha};
 
 #[derive(Debug, PartialEq)]
-pub enum StatusLine<'a> {
+pub enum StatusLine {
     One {
         status: StatusPair,
         sub: SubmoduleStatus,
         head_mode: Mode,
         index_mode: Mode,
         worktree_mode: Mode,
-        head_obj: &'a str,
-        index_obj: &'a str,
+        head_obj: String,
+        index_obj: String,
         path: OsString,
     },
     Two {
@@ -32,8 +32,8 @@ pub enum StatusLine<'a> {
         head_mode: Mode,
         index_mode: Mode,
         worktree_mode: Mode,
-        head_obj: &'a str,
-        index_obj: &'a str,
+        head_obj: String,
+        index_obj: String,
         change_score: ChangeScore,
         path: OsString,
         orig_path: OsString,
@@ -45,9 +45,9 @@ pub enum StatusLine<'a> {
         stage2_mode: Mode,
         stage3_mode: Mode,
         worktree_mode: Mode,
-        stage1_obj: &'a str,
-        stage2_obj: &'a str,
-        stage3_obj: &'a str,
+        stage1_obj: String,
+        stage2_obj: String,
+        stage3_obj: String,
         path: OsString,
     },
     Untracked {
@@ -197,8 +197,8 @@ fn one_file_line(input: &str) -> IResult<&str, StatusLine> {
             head_mode,
             index_mode,
             worktree_mode,
-            head_obj,
-            index_obj,
+            head_obj: head_obj.into(),
+            index_obj: index_obj.into(),
             path,
         },
     ))
@@ -223,8 +223,8 @@ fn two_file_line(input: &str) -> IResult<&str, StatusLine> {
             head_mode,
             index_mode,
             worktree_mode,
-            head_obj,
-            index_obj,
+            head_obj: head_obj.into(),
+            index_obj: index_obj.into(),
             change_score,
             path,
             orig_path,
@@ -252,9 +252,9 @@ fn unmerged_file_line(input: &str) -> IResult<&str, StatusLine> {
             stage2_mode,
             stage3_mode,
             worktree_mode,
-            stage1_obj,
-            stage2_obj,
-            stage3_obj,
+            stage1_obj: stage1_obj.into(),
+            stage2_obj: stage2_obj.into(),
+            stage3_obj: stage3_obj.into(),
             path,
         },
     ))
@@ -384,8 +384,8 @@ mod tests {
                 head_mode: Mode([1, 0, 0, 6, 4, 4]),
                 index_mode: Mode([1, 0, 0, 6, 4, 4]),
                 worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
-                head_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea",
-                index_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea",
+                head_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea".into(),
+                index_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea".into(),
                 change_score: ChangeScore::Rename(100),
                 path: OsString::from("README-2.md"),
                 orig_path: OsString::from("README.md")
@@ -402,8 +402,8 @@ mod tests {
                 head_mode: Mode([1, 0, 0, 6, 4, 4]),
                 index_mode: Mode([1, 0, 0, 6, 4, 4]),
                 worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
-                head_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e",
-                index_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e",
+                head_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e".into(),
+                index_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e".into(),
                 path: OsString::from(
                     "spec/transitions/service_request_transitions/fulfill_spec.rb"
                 ),

@@ -16,6 +16,10 @@ pub mod for_each_ref;
 pub mod ls_remote;
 pub mod status;
 
+pub use for_each_ref::parse as for_each_ref;
+pub use ls_remote::parse as ls_remote;
+pub use status::parse as status;
+
 #[derive(Debug)]
 pub enum Err<I> {
     Trailing(I),
@@ -67,7 +71,7 @@ trait Input: AsRef<str> + Eq + Default {}
 
 impl<T> Input for T where T: AsRef<str> + Eq + Default {}
 
-type Result<I, O> = std::result::Result<O, Err<I>>;
+pub type Result<I, O> = std::result::Result<O, Err<I>>;
 
 fn settle_parse_result<I: Default + Eq, O>(nom_result: IResult<I, O>) -> Result<I, O> {
     match nom_result {
