@@ -5,7 +5,7 @@ pub enum Error {
 }
 
 impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
+    fn from(_: std::io::Error) -> Self {
         Error::FailToExec
     }
 }
@@ -25,10 +25,10 @@ pub fn status() -> Result<Output> {
 
 pub fn for_each_ref() -> Result<Output> {
     Ok(Command::new("git")
-       .arg("for_each_ref")
+       .arg("for-each-ref")
        .arg("--shell") // escapes fields
        .arg("--format")
-       .arg("%(objectname) %(objecttype) %(refname) %(upstream) %(upstream:remotename) %(upstream:track) %(creator:name) %(creator:email) %(
-creatordate:rfc)")
-       .output()?)
+       .arg("%(objectname) %(objecttype) %(refname) %(upstream) %(upstream:remotename) %(upstream:track) %(creator)")
+       .output()?
+       )
 }

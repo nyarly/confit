@@ -1,6 +1,7 @@
 pub mod exec;
 pub mod parse;
 
+#[derive(Debug)]
 pub enum Error {
     Exec,
     Utf8,
@@ -12,7 +13,7 @@ pub enum Error {
 
 impl From<parse::Err<&str>> for Error {
     fn from(e: parse::Err<&str>) -> Self {
-        Error::Parse(format!("{:?}", e))
+        Error::Parse(format!("{}", e))
     }
 }
 
@@ -51,6 +52,7 @@ where
     let out = exec()?;
 
     if out.status.success() {
+        println!("{}", String::from_utf8_lossy(&out.stdout));
         Ok(parse(&String::from_utf8(out.stdout)?)?)
     } else {
         Err(e(String::from_utf8_lossy(&out.stderr).into_owned()))
