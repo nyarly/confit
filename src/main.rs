@@ -14,8 +14,6 @@ fn main() -> Result<(), git::Error> {
  * Args:
  * output control
  *
- * checked branch [default is current?]
- *
  * Tracking violations:
  * untracked branch
  */
