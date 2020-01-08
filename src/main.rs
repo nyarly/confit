@@ -9,3 +9,13 @@ fn main() -> Result<(), git::Error> {
 
     Ok(())
 }
+
+/*
+ * Args:
+ * output control
+ *
+ * checked branch [default is current?]
+ *
+ * Tracking violations:
+ * untracked branch
+ */
