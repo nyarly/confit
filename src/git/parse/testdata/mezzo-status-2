@@ -1,2 +1,5 @@
-2 R. N... 100644 100644 100644 11e1a9446255b2e9bb3eea5105e52967dbf9b1ea 11e1a9446255b2e9bb3eea5105e52967dbf9b1ea R100 README-2.md	README.md
-1 .M N... 100644 100644 100644 c68d13474cd3f99964c052e5acc771f4df1e668e c68d13474cd3f99964c052e5acc771f4df1e668e spec/transitions/service_request_transitions/fulfill_spec.rb
+# branch.oid 0a03ba3cfde6472cb7431958dd78ca2c0d65de74
+# branch.head bulk_update_api
+# branch.upstream origin/bulk_update_api
+# branch.ab +0 -0
+1 .M N... 100644 100644 100644 befd8a0574f48b0f17a655c8ed4e5a6353b460ac befd8a0574f48b0f17a655c8ed4e5a6353b460ac spec/controllers/service_requests_controller_spec.rb
