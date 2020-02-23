@@ -10,9 +10,8 @@ use nom::{
 };
 use std::array::TryFromSliceError;
 use std::convert::TryFrom;
-use std::ffi::OsString;
 
-use super::{filepath, settle_parse_result, sha, ObjectName, TrackingCounts};
+use super::{filepath, settle_parse_result, sha, ObjectName, RefName, TrackingCounts, WorkPath};
 
 #[derive(Debug, PartialEq)]
 pub struct Status {
@@ -24,7 +23,7 @@ pub struct Status {
 pub struct Branch {
     pub oid: Oid,   //(intial): None, or Some("0a03ba3cfde6472cb7431958dd78ca2c0d65de74")
     pub head: Head, //: None for (detached) or Some("bulk_update_api")
-    pub upstream: Option<String>, //: "origin/bulk_update_api",
+    pub upstream: Option<RefName>, //: "origin/bulk_update_api",
     pub commits: Option<TrackingCounts>, //: TrackingCounts(0,0),
 }
 
@@ -38,7 +37,7 @@ pub enum StatusLine {
         worktree_mode: Mode,
         head_obj: ObjectName,
         index_obj: ObjectName,
-        path: OsString,
+        path: WorkPath,
     },
     Two {
         status: StatusPair,
@@ -49,8 +48,8 @@ pub enum StatusLine {
         head_obj: ObjectName,
         index_obj: ObjectName,
         change_score: ChangeScore,
-        path: OsString,
-        orig_path: OsString,
+        path: WorkPath,
+        orig_path: WorkPath,
     },
     Unmerged {
         status: StatusPair,
@@ -62,26 +61,26 @@ pub enum StatusLine {
         stage1_obj: ObjectName,
         stage2_obj: ObjectName,
         stage3_obj: ObjectName,
-        path: OsString,
+        path: WorkPath,
     },
     Untracked {
-        path: OsString,
+        path: WorkPath,
     },
     Ignored {
-        path: OsString,
+        path: WorkPath,
     },
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Oid {
     Initial,
-    Commit(String),
+    Commit(RefName),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Head {
     Detached,
-    Branch(String),
+    Branch(RefName),
 }
 
 #[derive(Debug, PartialEq)]
@@ -138,7 +137,7 @@ pub fn parse(input: &str) -> super::Result<&str, Status> {
 
 fn status(input: &str) -> IResult<&str, Status> {
     let (i, branch) = opt(branch)(input)?;
-    let (i, lines) = many0(terminated(status_line, tag("\n")))(i)?;
+    let (i, lines) = status_lines(i)?;
     Ok((i, Status { branch, lines }))
 }
 
@@ -180,7 +179,7 @@ fn branch_head(input: &str) -> IResult<&str, Head> {
     )(input)
 }
 
-fn branch_upstream(input: &str) -> IResult<&str, String> {
+fn branch_upstream(input: &str) -> IResult<&str, RefName> {
     delimited(
         tag("# branch.upstream "),
         map(take_until("\n"), |s: &str| s.into()),
@@ -506,11 +505,11 @@ mod tests {
     fn test_path() {
         assert_eq!(
             filepath("README-2.md\tREADME.md"),
-            Ok(("\tREADME.md", OsString::from("README-2.md")))
+            Ok(("\tREADME.md", WorkPath::from("README-2.md")))
         );
         assert_eq!(
             filepath("README-2.md"),
-            Ok(("", OsString::from("README-2.md")))
+            Ok(("", WorkPath::from("README-2.md")))
         );
     }
 
@@ -572,7 +571,7 @@ mod tests {
                 worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
                 head_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e".into(),
                 index_obj: "c68d13474cd3f99964c052e5acc771f4df1e668e".into(),
-                path: OsString::from(
+                path: WorkPath::from(
                     "spec/transitions/service_request_transitions/fulfill_spec.rb"
                 ),
             }

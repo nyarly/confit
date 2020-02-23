@@ -6,17 +6,16 @@ use nom::{
     IResult,
 };
 
-use super::{filepath, settle_parse_result, sha, ObjectName};
-use std::ffi::OsString;
+use super::{filepath, settle_parse_result, sha, ObjectName, WorkPath};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RefPair {
     refname: ObjectName,
-    path: OsString,
+    path: WorkPath,
 }
 
-impl From<(ObjectName, OsString)> for RefPair {
-    fn from(pair: (ObjectName, OsString)) -> Self {
+impl From<(ObjectName, WorkPath)> for RefPair {
+    fn from(pair: (ObjectName, WorkPath)) -> Self {
         let (refname, path) = pair;
         RefPair { refname, path }
     }

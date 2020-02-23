@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-use super::{is_digit, settle_parse_result, sha, ObjectName, TrackingCounts};
+use super::{is_digit, settle_parse_result, sha, ObjectName, RefName, TrackingCounts};
 use chrono::{DateTime, Utc};
 
 /*
@@ -21,7 +21,7 @@ use chrono::{DateTime, Utc};
 pub struct RefLine {
     object_name: ObjectName,
     object_type: ObjectType,
-    local_ref: String,
+    local_ref: RefName,
     upstream: TrackSync,
     creator_name: String,
     creator_email: String,
@@ -40,7 +40,7 @@ pub enum ObjectType {
 #[derive(Debug, PartialEq, Eq)]
 pub struct RemoteRef {
     remote: String,
-    refname: String,
+    refname: RefName,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -55,8 +55,8 @@ pub enum TrackSync {
     },
 }
 
-impl From<(String, String, Option<(u64, u64)>)> for TrackSync {
-    fn from(t: (String, String, Option<(u64, u64)>)) -> TrackSync {
+impl From<(String, RefName, Option<(u64, u64)>)> for TrackSync {
+    fn from(t: (String, RefName, Option<(u64, u64)>)) -> TrackSync {
         use TrackSync::*;
 
         let (remote, refname, ts) = t;
@@ -106,9 +106,9 @@ fn line(input: &str) -> IResult<&str, RefLine> {
         tag("' '"),     // ' '
         object_type,    // commit
         tag("' '"),     // ' '
-        qstring,        // refs/heads/multiple_provisioning
+        qref,        // refs/heads/multiple_provisioning
         tag("' '"),     // ' '
-        qstring,        // refs/remotes/origin/multiple_provisioning
+        qref,        // refs/remotes/origin/multiple_provisioning
         tag("' '"),     // ' '
         qstring,        // origin
         tag("' '"),     // ' '
@@ -121,7 +121,7 @@ fn line(input: &str) -> IResult<&str, RefLine> {
     Ok((
         rest,
         RefLine {
-            object_name: object_name,
+            object_name,
             object_type: ot,
             local_ref,
             upstream: (remote, refname, ts).into(),
@@ -130,6 +130,10 @@ fn line(input: &str) -> IResult<&str, RefLine> {
             creation_date,
         },
     ))
+}
+
+fn qref(input: &str) -> IResult<&str, RefName> {
+    map(take_until("'"), RefName::from)(input)
 }
 
 fn qstring(input: &str) -> IResult<&str, String> {

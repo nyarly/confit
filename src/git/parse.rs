@@ -25,7 +25,31 @@ pub struct ObjectName(String);
 
 impl From<&str> for ObjectName {
     fn from(s: &str) -> Self {
-        ObjectName(s.into())
+        ObjectName(String::from(s))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct RefName(String);
+
+impl From<&str> for RefName {
+    fn from(s: &str) -> Self {
+        RefName(String::from(s))
+    }
+}
+
+impl AsRef<str> for RefName {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct WorkPath(OsString);
+
+impl From<&str> for WorkPath {
+    fn from(s: &str) -> Self {
+        WorkPath(OsString::from(s))
     }
 }
 
@@ -106,8 +130,8 @@ fn sha(input: &str) -> IResult<&str, ObjectName> {
     map(take_while_m_n(40, 40, is_hex_digit), |s: &str| ObjectName(s.into()))(input)
 }
 
-fn filepath(input: &str) -> IResult<&str, OsString> {
-    map(take_till1(end_of_path), OsString::from)(input)
+fn filepath(input: &str) -> IResult<&str, WorkPath> {
+    map(take_till1(end_of_path), WorkPath::from)(input)
 }
 
 fn end_of_path(input: char) -> bool {
