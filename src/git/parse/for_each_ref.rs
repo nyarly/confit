@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-use super::{is_digit, settle_parse_result, sha};
+use super::{is_digit, settle_parse_result, sha, ObjectName};
 use chrono::{DateTime, Utc};
 
 /*
@@ -19,7 +19,7 @@ use chrono::{DateTime, Utc};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RefLine {
-    object_name: String,
+    object_name: ObjectName,
     object_type: ObjectType,
     local_ref: String,
     upstream: TrackSync,
@@ -122,7 +122,7 @@ fn line(input: &str) -> IResult<&str, RefLine> {
     Ok((
         rest,
         RefLine {
-            object_name: object_name.into(),
+            object_name: object_name,
             object_type: ot,
             local_ref,
             upstream: (remote, refname, ts).into(),

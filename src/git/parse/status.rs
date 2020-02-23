@@ -12,7 +12,7 @@ use std::array::TryFromSliceError;
 use std::convert::TryFrom;
 use std::ffi::OsString;
 
-use super::{filepath, settle_parse_result, sha};
+use super::{filepath, settle_parse_result, sha, ObjectName};
 
 #[derive(Debug, PartialEq)]
 pub struct Status {
@@ -36,8 +36,8 @@ pub enum StatusLine {
         head_mode: Mode,
         index_mode: Mode,
         worktree_mode: Mode,
-        head_obj: String,
-        index_obj: String,
+        head_obj: ObjectName,
+        index_obj: ObjectName,
         path: OsString,
     },
     Two {
@@ -46,8 +46,8 @@ pub enum StatusLine {
         head_mode: Mode,
         index_mode: Mode,
         worktree_mode: Mode,
-        head_obj: String,
-        index_obj: String,
+        head_obj: ObjectName,
+        index_obj: ObjectName,
         change_score: ChangeScore,
         path: OsString,
         orig_path: OsString,
@@ -59,9 +59,9 @@ pub enum StatusLine {
         stage2_mode: Mode,
         stage3_mode: Mode,
         worktree_mode: Mode,
-        stage1_obj: String,
-        stage2_obj: String,
-        stage3_obj: String,
+        stage1_obj: ObjectName,
+        stage2_obj: ObjectName,
+        stage3_obj: ObjectName,
         path: OsString,
     },
     Untracked {

@@ -6,17 +6,17 @@ use nom::{
     IResult,
 };
 
-use super::{filepath, settle_parse_result, sha};
+use super::{filepath, settle_parse_result, sha, ObjectName};
 use std::ffi::OsString;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RefPair {
-    refname: String,
+    refname: ObjectName,
     path: OsString,
 }
 
-impl From<(String, OsString)> for RefPair {
-    fn from(pair: (String, OsString)) -> Self {
+impl From<(ObjectName, OsString)> for RefPair {
+    fn from(pair: (ObjectName, OsString)) -> Self {
         let (refname, path) = pair;
         RefPair { refname, path }
     }
@@ -28,7 +28,7 @@ pub fn parse(input: &str) -> super::Result<&str, Vec<RefPair>> {
 
 fn ref_pair(input: &str) -> IResult<&str, RefPair> {
     map(
-        tuple((map(terminated(sha, tag("\t")), String::from), filepath)),
+        tuple((terminated(sha, tag("\t")), filepath)),
         RefPair::from,
     )(input)
 }

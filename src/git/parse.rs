@@ -20,6 +20,15 @@ pub use for_each_ref::parse as for_each_ref;
 pub use ls_remote::parse as ls_remote;
 pub use status::parse as status;
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct ObjectName(String);
+
+impl From<&str> for ObjectName {
+    fn from(s: &str) -> Self {
+        ObjectName(s.into())
+    }
+}
+
 #[derive(Debug)]
 pub enum Err<I> {
     Trailing(I),
@@ -89,8 +98,8 @@ fn is_hex_digit(c: char) -> bool {
     c.is_digit(16)
 }
 
-fn sha(input: &str) -> IResult<&str, &str> {
-    take_while_m_n(40, 40, is_hex_digit)(input)
+fn sha(input: &str) -> IResult<&str, ObjectName> {
+    map(take_while_m_n(40, 40, is_hex_digit), |s: &str| ObjectName(s.into()))(input)
 }
 
 fn filepath(input: &str) -> IResult<&str, OsString> {
