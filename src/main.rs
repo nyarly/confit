@@ -28,6 +28,7 @@ impl Summary {
 
     fn items(&self) -> Vec<Item> {
         vec![
+            Item::untracked_files(self),
             Item::modified_files(self),
             Item::uncommited_changes(self),
             /*
@@ -57,12 +58,32 @@ impl Summary {
 
 use git::parse::status::{LineStatus, StatusLine::*, StatusPair};
 impl Item {
+    fn untracked_files(s: &Summary) -> Self {
+        let passed = s.status.lines.iter().all(|line| match line {
+            Untracked { .. } => false,
+            _ => true,
+        });
+
+        Item {
+            name: "no unstaged changes",
+            passed,
+        }
+    }
+
     fn modified_files(s: &Summary) -> Self {
         let passed = s.status.lines.iter().all(|line| match line {
             One {
                 status: StatusPair { unstaged: m, .. },
                 ..
-            } if *m != LineStatus::Unmodified => false,
+            } |
+            Two {
+                status: StatusPair { unstaged: m, .. },
+                ..
+            } |
+            Unmerged {
+                status: StatusPair { unstaged: m, .. },
+                ..
+            }if *m != LineStatus::Unmodified => false,
             _ => true,
         });
 
@@ -75,6 +96,14 @@ impl Item {
     fn uncommited_changes(s: &Summary) -> Self {
         let passed = s.status.lines.iter().all(|line| match line {
             One {
+                status: StatusPair { staged: m, .. },
+                ..
+            } |
+            Two {
+                status: StatusPair { staged: m, .. },
+                ..
+            } |
+            Unmerged {
                 status: StatusPair { staged: m, .. },
                 ..
             } if *m != LineStatus::Unmodified => false,

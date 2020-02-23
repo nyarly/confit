@@ -15,6 +15,20 @@ use std::ffi::OsString;
 use super::{filepath, settle_parse_result, sha};
 
 #[derive(Debug, PartialEq)]
+pub struct Status {
+    pub branch: Option<Branch>,
+    pub lines: Vec<StatusLine>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Branch {
+    pub oid: Oid,   //(intial): None, or Some("0a03ba3cfde6472cb7431958dd78ca2c0d65de74")
+    pub head: Head, //: None for (detached) or Some("bulk_update_api")
+    pub upstream: Option<String>, //: "origin/bulk_update_api",
+    pub commits: Option<Commits>, //: Commits(0,0),
+}
+
+#[derive(Debug, PartialEq)]
 pub enum StatusLine {
     One {
         status: StatusPair,
@@ -59,20 +73,6 @@ pub enum StatusLine {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Status {
-    pub branch: Option<Branch>,
-    pub lines: Vec<StatusLine>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Branch {
-    pub oid: Oid,   //(intial): None, or Some("0a03ba3cfde6472cb7431958dd78ca2c0d65de74")
-    pub head: Head, //: None for (detached) or Some("bulk_update_api")
-    pub upstream: Option<String>, //: "origin/bulk_update_api",
-    pub commits: Option<Commits>, //: Commits(0,0),
-}
-
-#[derive(Debug, PartialEq)]
 pub struct Commits(u16, u16);
 
 #[derive(Debug, PartialEq)]
@@ -85,6 +85,54 @@ pub enum Oid {
 pub enum Head {
     Detached,
     Branch(String),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Mode([u8; 6]);
+
+#[derive(Debug, PartialEq)]
+pub enum SubmoduleStatus {
+    Not,
+    Is(bool, bool, bool),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ChangeScore {
+    Rename(u8),
+    Copy(u8),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StatusPair {
+    pub staged: LineStatus,
+    pub unstaged: LineStatus,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum LineStatus {
+    Unmodified,
+    Modified,
+    Added,
+    Deleted,
+    Renamed,
+    Copied,
+    Unmerged,
+    Untracked,
+    Ignored,
+}
+
+impl TryFrom<Vec<u8>> for Mode {
+    type Error = TryFromSliceError;
+    fn try_from(v: Vec<u8>) -> Result<Mode, TryFromSliceError> {
+        Ok(Mode(<[u8; 6]>::try_from(&v[..])?))
+    }
+}
+
+impl From<(LineStatus, LineStatus)> for StatusPair {
+    fn from(t: (LineStatus, LineStatus)) -> StatusPair {
+        let (staged, unstaged) = t;
+        StatusPair { staged, unstaged }
+    }
 }
 
 pub fn parse(input: &str) -> super::Result<&str, Status> {
@@ -165,53 +213,6 @@ pub fn status_lines(input: &str) -> IResult<&str, Vec<StatusLine>> {
     many0(terminated(status_line, tag("\n")))(input)
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Mode([u8; 6]);
-
-impl TryFrom<Vec<u8>> for Mode {
-    type Error = TryFromSliceError;
-    fn try_from(v: Vec<u8>) -> Result<Mode, TryFromSliceError> {
-        Ok(Mode(<[u8; 6]>::try_from(&v[..])?))
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum LineStatus {
-    Unmodified,
-    Modified,
-    Added,
-    Deleted,
-    Renamed,
-    Copied,
-    Unmerged,
-    Untracked,
-    Ignored,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct StatusPair {
-    pub staged: LineStatus,
-    pub unstaged: LineStatus,
-}
-
-impl From<(LineStatus, LineStatus)> for StatusPair {
-    fn from(t: (LineStatus, LineStatus)) -> StatusPair {
-        let (staged, unstaged) = t;
-        StatusPair { staged, unstaged }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum SubmoduleStatus {
-    Not,
-    Is(bool, bool, bool),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ChangeScore {
-    Rename(u8),
-    Copy(u8),
-}
 
 fn from_octal(input: &str) -> Result<u8, std::num::ParseIntError> {
     u8::from_str_radix(input, 8)
