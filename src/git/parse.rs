@@ -29,6 +29,10 @@ impl From<&str> for ObjectName {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct TrackingCounts(u64, u64);
+
+
 #[derive(Debug)]
 pub enum Err<I> {
     Trailing(I),

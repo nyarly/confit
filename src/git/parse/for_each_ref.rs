@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-use super::{is_digit, settle_parse_result, sha, ObjectName};
+use super::{is_digit, settle_parse_result, sha, ObjectName, TrackingCounts};
 use chrono::{DateTime, Utc};
 
 /*
@@ -28,6 +28,7 @@ pub struct RefLine {
     creation_date: DateTime<Utc>,
 }
 
+// XXX review pulling this up to RefLine
 #[derive(Debug, PartialEq, Eq)]
 pub enum ObjectType {
     Blob,
@@ -47,8 +48,7 @@ pub enum TrackSync {
     Untracked,
     Track {
         remote_ref: RemoteRef,
-        ahead: u64,
-        behind: u64,
+        counts: TrackingCounts,
     },
     Gone {
         remote_ref: RemoteRef,
@@ -67,8 +67,7 @@ impl From<(String, String, Option<(u64, u64)>)> for TrackSync {
                     remote_ref: RemoteRef { remote, refname },
                 },
                 Some((ahead, behind)) => Track {
-                    ahead,
-                    behind,
+                    counts: TrackingCounts(ahead, behind),
                     remote_ref: RemoteRef { remote, refname },
                 },
             },
@@ -297,8 +296,7 @@ mod tests {
                 object_name: "f8f49343edaa2a1e6903cbad13ddbc50ad9e12d2".into(),
                 object_type: ObjectType::Commit,
                 upstream: TrackSync::Track{
-                    ahead: 0,
-                    behind: 0,
+                    counts: TrackingCounts(0,0),
                     remote_ref: RemoteRef{
                         remote: "along".into(),
                         refname: "refs/remotes/along/mezzo".into(),

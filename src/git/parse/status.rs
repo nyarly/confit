@@ -12,7 +12,7 @@ use std::array::TryFromSliceError;
 use std::convert::TryFrom;
 use std::ffi::OsString;
 
-use super::{filepath, settle_parse_result, sha, ObjectName};
+use super::{filepath, settle_parse_result, sha, ObjectName, TrackingCounts};
 
 #[derive(Debug, PartialEq)]
 pub struct Status {
@@ -25,7 +25,7 @@ pub struct Branch {
     pub oid: Oid,   //(intial): None, or Some("0a03ba3cfde6472cb7431958dd78ca2c0d65de74")
     pub head: Head, //: None for (detached) or Some("bulk_update_api")
     pub upstream: Option<String>, //: "origin/bulk_update_api",
-    pub commits: Option<Commits>, //: Commits(0,0),
+    pub commits: Option<TrackingCounts>, //: TrackingCounts(0,0),
 }
 
 #[derive(Debug, PartialEq)]
@@ -71,9 +71,6 @@ pub enum StatusLine {
         path: OsString,
     },
 }
-
-#[derive(Debug, PartialEq)]
-pub struct Commits(u16, u16);
 
 #[derive(Debug, PartialEq)]
 pub enum Oid {
@@ -191,18 +188,18 @@ fn branch_upstream(input: &str) -> IResult<&str, String> {
     )(input)
 }
 
-fn branch_commits(input: &str) -> IResult<&str, Commits> {
+fn branch_commits(input: &str) -> IResult<&str, TrackingCounts> {
     map(
         delimited(
             tag("# branch.ab "),
             separated_pair(tagged_commits("+"), tag(" "), tagged_commits("-")),
             tag("\n"),
         ),
-        |(a, b)| Commits(a, b),
+        |(a, b)| TrackingCounts(a, b),
     )(input)
 }
 
-fn tagged_commits<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, u16> {
+fn tagged_commits<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, u64> {
     map_res(
         preceded(tag(pattern), take_while(|c: char| c.is_digit(10))),
         |n: &str| n.parse(),
@@ -398,7 +395,7 @@ mod tests {
                     oid: Oid::Commit("0a03ba3cfde6472cb7431958dd78ca2c0d65de74".into()),
                     head: Head::Branch("bulk_update_api".into()),
                     upstream: Some("origin/bulk_update_api".into()),
-                    commits: Some(Commits(0, 0))
+                    commits: Some(TrackingCounts(0, 0))
                 }),
                 lines: vec![StatusLine::One {
                     status: StatusPair {
@@ -432,7 +429,7 @@ mod tests {
                     oid: Oid::Commit("0a03ba3cfde6472cb7431958dd78ca2c0d65de74".into()),
                     head: Head::Branch("bulk_update_api".into()),
                     upstream: Some("origin/bulk_update_api".into()),
-                    commits: Some(Commits(0, 0)),
+                    commits: Some(TrackingCounts(0, 0)),
                 }
             ))
         )
@@ -458,7 +455,7 @@ mod tests {
     fn sha_parse() {
         assert_eq!(
             sha("11e1a9446255b2e9bb3eea5105e52967dbf9b1ea"),
-            Ok(("", "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea"))
+            Ok(("", ObjectName::from("11e1a9446255b2e9bb3eea5105e52967dbf9b1ea")))
         );
     }
 
