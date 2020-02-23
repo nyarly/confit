@@ -19,7 +19,7 @@ pub fn ls_remote() -> Result<Output> {
 pub fn status() -> Result<Output> {
     Ok(Command::new("git")
         .arg("status")
-        .arg("--branch") // XXX parse needs to be fixed to accomodate
+        .arg("--branch")
         .arg("--porcelain=v2")
         .output()?)
 }

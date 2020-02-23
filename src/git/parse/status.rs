@@ -1,11 +1,11 @@
 extern crate nom;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take, take_while},
+    bytes::complete::{tag, take, take_until, take_while},
     character::complete::one_of,
-    combinator::{map, map_res},
+    combinator::{map, map_res, opt},
     multi::{count, many0},
-    sequence::{preceded, terminated, tuple},
+    sequence::{delimited, preceded, separated_pair, terminated, tuple},
     IResult,
 };
 use std::array::TryFromSliceError;
@@ -58,8 +58,111 @@ pub enum StatusLine {
     },
 }
 
-pub fn parse(input: &str) -> super::Result<&str, Vec<StatusLine>> {
-    settle_parse_result(many0(terminated(status_line, tag("\n")))(input))
+#[derive(Debug, PartialEq)]
+pub struct Status {
+    pub branch: Option<Branch>,
+    pub lines: Vec<StatusLine>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Branch {
+    pub oid: Oid,   //(intial): None, or Some("0a03ba3cfde6472cb7431958dd78ca2c0d65de74")
+    pub head: Head, //: None for (detached) or Some("bulk_update_api")
+    pub upstream: Option<String>, //: "origin/bulk_update_api",
+    pub commits: Option<Commits>, //: Commits(0,0),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Commits(u16, u16);
+
+#[derive(Debug, PartialEq)]
+pub enum Oid {
+    Initial,
+    Commit(String),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Head {
+    Detached,
+    Branch(String),
+}
+
+pub fn parse(input: &str) -> super::Result<&str, Status> {
+    settle_parse_result(status(input))
+}
+
+fn status(input: &str) -> IResult<&str, Status> {
+    let (i, branch) = opt(branch)(input)?;
+    let (i, lines) = many0(terminated(status_line, tag("\n")))(i)?;
+    Ok((i, Status { branch, lines }))
+}
+
+fn branch(input: &str) -> IResult<&str, Branch> {
+    let (i, oid) = branch_oid(input)?;
+    let (i, head) = branch_head(i)?;
+    let (i, upstream) = opt(branch_upstream)(i)?;
+    let (i, commits) = opt(branch_commits)(i)?;
+    Ok((
+        i,
+        Branch {
+            oid,
+            head,
+            upstream,
+            commits,
+        },
+    ))
+}
+
+fn branch_oid(input: &str) -> IResult<&str, Oid> {
+    delimited(
+        tag("# branch.oid "),
+        alt((
+            map(tag("(initial)"), |_| Oid::Initial),
+            map(take_until("\n"), |s: &str| Oid::Commit(s.into())),
+        )),
+        tag("\n"),
+    )(input)
+}
+
+fn branch_head(input: &str) -> IResult<&str, Head> {
+    delimited(
+        tag("# branch.head "),
+        alt((
+            map(tag("(detached)"), |_| Head::Detached),
+            map(take_until("\n"), |s: &str| Head::Branch(s.into())),
+        )),
+        tag("\n"),
+    )(input)
+}
+
+fn branch_upstream(input: &str) -> IResult<&str, String> {
+    delimited(
+        tag("# branch.upstream "),
+        map(take_until("\n"), |s: &str| s.into()),
+        tag("\n"),
+    )(input)
+}
+
+fn branch_commits(input: &str) -> IResult<&str, Commits> {
+    map(
+        delimited(
+            tag("# branch.ab "),
+            separated_pair(tagged_commits("+"), tag(" "), tagged_commits("-")),
+            tag("\n"),
+        ),
+        |(a, b)| Commits(a, b),
+    )(input)
+}
+
+fn tagged_commits<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, u16> {
+    map_res(
+        preceded(tag(pattern), take_while(|c: char| c.is_digit(10))),
+        |n: &str| n.parse(),
+    )
+}
+
+pub fn status_lines(input: &str) -> IResult<&str, Vec<StatusLine>> {
+    many0(terminated(status_line, tag("\n")))(input)
 }
 
 #[derive(Debug, PartialEq)]
@@ -72,8 +175,8 @@ impl TryFrom<Vec<u8>> for Mode {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Status {
+#[derive(Debug, PartialEq, Eq)]
+pub enum LineStatus {
     Unmodified,
     Modified,
     Added,
@@ -87,12 +190,12 @@ pub enum Status {
 
 #[derive(Debug, PartialEq)]
 pub struct StatusPair {
-    staged: Status,
-    unstaged: Status,
+    pub staged: LineStatus,
+    pub unstaged: LineStatus,
 }
 
-impl From<(Status, Status)> for StatusPair {
-    fn from(t: (Status, Status)) -> StatusPair {
+impl From<(LineStatus, LineStatus)> for StatusPair {
+    fn from(t: (LineStatus, LineStatus)) -> StatusPair {
         let (staged, unstaged) = t;
         StatusPair { staged, unstaged }
     }
@@ -122,31 +225,32 @@ fn mode(input: &str) -> IResult<&str, Mode> {
     map_res(count(octal, 6), Mode::try_from)(input)
 }
 
-fn status(input: &str) -> IResult<&str, Status> {
+fn line_status(input: &str) -> IResult<&str, LineStatus> {
+    use LineStatus::*;
     take(1u8)(input).and_then(|parsed| match parsed {
-        (i, ".") => Ok((i, Status::Unmodified)),
-        (i, "M") => Ok((i, Status::Modified)),
-        (i, "A") => Ok((i, Status::Added)),
-        (i, "D") => Ok((i, Status::Deleted)),
-        (i, "R") => Ok((i, Status::Renamed)),
-        (i, "C") => Ok((i, Status::Copied)),
-        (i, "U") => Ok((i, Status::Unmerged)),
-        (i, "?") => Ok((i, Status::Untracked)),
-        (i, "!") => Ok((i, Status::Ignored)),
+        (i, ".") => Ok((i, Unmodified)),
+        (i, "M") => Ok((i, Modified)),
+        (i, "A") => Ok((i, Added)),
+        (i, "D") => Ok((i, Deleted)),
+        (i, "R") => Ok((i, Renamed)),
+        (i, "C") => Ok((i, Copied)),
+        (i, "U") => Ok((i, Unmerged)),
+        (i, "?") => Ok((i, Untracked)),
+        (i, "!") => Ok((i, Ignored)),
 
         (i, _) => Err(nom::Err::Error((i, nom::error::ErrorKind::OneOf))),
     })
 }
 
 fn status_pair(input: &str) -> IResult<&str, StatusPair> {
-    map(tuple((status, status)), StatusPair::from)(input)
+    map(tuple((line_status, line_status)), StatusPair::from)(input)
 }
 
 fn submodule_status_flag<I>(pattern: &'static str) -> impl Fn(I) -> IResult<I, bool>
 where
     I: nom::InputIter<Item = char> + nom::Slice<std::ops::RangeFrom<usize>>,
 {
-    map(one_of(pattern), |c| !(c == '.'))
+    map(one_of(pattern), |c| c != '.')
 }
 
 fn submodule_status(input: &str) -> IResult<&str, SubmoduleStatus> {
@@ -165,18 +269,17 @@ fn submodule_status(input: &str) -> IResult<&str, SubmoduleStatus> {
     }
 }
 
-fn tagged_score<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, &str> {
-    preceded(tag(pattern), take_while(|c: char| c.is_digit(10)))
+fn tagged_score<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, u8> {
+    map_res(
+        preceded(tag(pattern), take_while(|c: char| c.is_digit(10))),
+        |n: &str| n.parse(),
+    )
 }
 
 fn change_score(input: &str) -> IResult<&str, ChangeScore> {
     alt((
-        map_res(tagged_score("R"), |n| {
-            n.parse().map(|d| ChangeScore::Rename(d))
-        }),
-        map_res(tagged_score("C"), |n| {
-            n.parse().map(|d| ChangeScore::Copy(d))
-        }),
+        map(tagged_score("R"), ChangeScore::Rename),
+        map(tagged_score("C"), ChangeScore::Copy),
     ))(input)
 }
 
@@ -286,6 +389,55 @@ mod tests {
     use nom;
 
     #[test]
+    fn full_parse() {
+        assert_eq!(
+            parse(include_str!("testdata/mezzo-status-2")).unwrap(),
+            Status {
+                branch: Some(Branch {
+                    oid: Oid::Commit("0a03ba3cfde6472cb7431958dd78ca2c0d65de74".into()),
+                    head: Head::Branch("bulk_update_api".into()),
+                    upstream: Some("origin/bulk_update_api".into()),
+                    commits: Some(Commits(0, 0))
+                }),
+                lines: vec![StatusLine::One {
+                    status: StatusPair {
+                        staged: LineStatus::Unmodified,
+                        unstaged: LineStatus::Modified
+                    },
+                    sub: SubmoduleStatus::Not,
+                    head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    head_obj: "befd8a0574f48b0f17a655c8ed4e5a6353b460ac".into(),
+                    index_obj: "befd8a0574f48b0f17a655c8ed4e5a6353b460ac".into(),
+                    path: "spec/controllers/service_requests_controller_spec.rb".into()
+                }]
+            }
+        )
+    }
+
+    #[test]
+    fn branch_parse() {
+        assert_eq!(
+            branch(
+                "# branch.oid 0a03ba3cfde6472cb7431958dd78ca2c0d65de74\n\
+           # branch.head bulk_update_api\n\
+           # branch.upstream origin/bulk_update_api\n\
+           # branch.ab +0 -0\n"
+            ),
+            Ok((
+                "",
+                Branch {
+                    oid: Oid::Commit("0a03ba3cfde6472cb7431958dd78ca2c0d65de74".into()),
+                    head: Head::Branch("bulk_update_api".into()),
+                    upstream: Some("origin/bulk_update_api".into()),
+                    commits: Some(Commits(0, 0)),
+                }
+            ))
+        )
+    }
+
+    #[test]
     fn mode_parse() {
         assert_eq!(mode("100644"), Ok(("", Mode([1, 0, 0, 6, 4, 4]))));
         assert_eq!(mode("777777"), Ok(("", Mode([7, 7, 7, 7, 7, 7]))));
@@ -316,8 +468,8 @@ mod tests {
             Ok((
                 "",
                 StatusPair {
-                    staged: Status::Unmodified,
-                    unstaged: Status::Unmodified
+                    staged: LineStatus::Unmodified,
+                    unstaged: LineStatus::Unmodified
                 }
             ))
         );
@@ -326,8 +478,8 @@ mod tests {
             Ok((
                 "",
                 StatusPair {
-                    staged: Status::Renamed,
-                    unstaged: Status::Unmodified
+                    staged: LineStatus::Renamed,
+                    unstaged: LineStatus::Unmodified
                 }
             ))
         );
@@ -336,8 +488,8 @@ mod tests {
             Ok((
                 "",
                 StatusPair {
-                    staged: Status::Unmodified,
-                    unstaged: Status::Modified
+                    staged: LineStatus::Unmodified,
+                    unstaged: LineStatus::Modified
                 }
             ))
         )
@@ -372,31 +524,49 @@ mod tests {
 
     #[test]
     fn status_lines_parse() {
-        let lines = parse(include_str!("testdata/mezzo-status-2")).unwrap();
+        let (_rest, lines) = status_lines(include_str!("testdata/mezzo-status-1")).unwrap();
+
+        assert_eq!(lines.len(), 3);
+
         assert_eq!(
             lines[0],
-            StatusLine::Two {
+            StatusLine::One {
                 status: StatusPair {
-                    staged: Status::Renamed,
-                    unstaged: Status::Unmodified
+                    staged: LineStatus::Unmodified,
+                    unstaged: LineStatus::Deleted
                 },
                 sub: SubmoduleStatus::Not,
                 head_mode: Mode([1, 0, 0, 6, 4, 4]),
                 index_mode: Mode([1, 0, 0, 6, 4, 4]),
-                worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                worktree_mode: Mode([0, 0, 0, 0, 0, 0]),
                 head_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea".into(),
                 index_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea".into(),
-                change_score: ChangeScore::Rename(100),
-                path: OsString::from("README-2.md"),
-                orig_path: OsString::from("README.md")
+                path: "README.md".into()
             }
         );
         assert_eq!(
             lines[1],
             StatusLine::One {
                 status: StatusPair {
-                    staged: Status::Unmodified,
-                    unstaged: Status::Modified
+                    staged: LineStatus::Added,
+                    unstaged: LineStatus::Unmodified
+                },
+                sub: SubmoduleStatus::Not,
+                head_mode: Mode([0, 0, 0, 0, 0, 0]),
+                index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                head_obj: "0000000000000000000000000000000000000000".into(),
+                index_obj: "11e1a9446255b2e9bb3eea5105e52967dbf9b1ea".into(),
+                path: "old-README.md".into()
+            }
+        );
+
+        assert_eq!(
+            lines[2],
+            StatusLine::One {
+                status: StatusPair {
+                    staged: LineStatus::Unmodified,
+                    unstaged: LineStatus::Modified
                 },
                 sub: SubmoduleStatus::Not,
                 head_mode: Mode([1, 0, 0, 6, 4, 4]),

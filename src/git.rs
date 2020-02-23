@@ -1,6 +1,10 @@
 pub mod exec;
 pub mod parse;
 
+pub use parse::ls_remote::RefPair;
+pub use parse::status::Status;
+pub use parse::for_each_ref::RefLine;
+
 #[derive(Debug)]
 pub enum Error {
     Exec,
@@ -31,15 +35,15 @@ impl From<exec::Error> for Error {
 
 type Result<O> = std::result::Result<O, Error>;
 
-pub fn ls_remote() -> Result<Vec<parse::ls_remote::RefPair>> {
+pub fn ls_remote() -> Result<Vec<RefPair>> {
     exec_and_parse(exec::ls_remote, parse::ls_remote, Error::LsRemote)
 }
 
-pub fn status() -> Result<Vec<parse::status::StatusLine>> {
+pub fn status() -> Result<Status> {
     exec_and_parse(exec::status, parse::status, Error::Status)
 }
 
-pub fn for_each_ref() -> Result<Vec<parse::for_each_ref::RefLine>> {
+pub fn for_each_ref() -> Result<Vec<RefLine>> {
     exec_and_parse(exec::for_each_ref, parse::for_each_ref, Error::ForEachRef)
 }
 
@@ -52,7 +56,7 @@ where
     let out = exec()?;
 
     if out.status.success() {
-        println!("{}", String::from_utf8_lossy(&out.stdout));
+        //println!("{}", String::from_utf8_lossy(&out.stdout));
         Ok(parse(&String::from_utf8(out.stdout)?)?)
     } else {
         Err(e(String::from_utf8_lossy(&out.stderr).into_owned()))
