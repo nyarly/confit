@@ -54,7 +54,7 @@ impl From<&str> for WorkPath {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct TrackingCounts(u64, u64);
+pub struct TrackingCounts(pub u64, pub u64);
 
 
 #[derive(Debug)]

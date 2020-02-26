@@ -19,13 +19,13 @@ use chrono::{DateTime, Utc};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RefLine {
-    object_name: ObjectName,
-    object_type: ObjectType,
-    local_ref: RefName,
-    upstream: TrackSync,
-    creator_name: String,
-    creator_email: String,
-    creation_date: DateTime<Utc>,
+    pub object_name: ObjectName,
+    pub object_type: ObjectType,
+    pub local_ref: RefName,
+    pub upstream: TrackSync,
+    pub creator_name: String,
+    pub creator_email: String,
+    pub creation_date: DateTime<Utc>,
 }
 
 // XXX review pulling this up to RefLine
@@ -39,8 +39,8 @@ pub enum ObjectType {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RemoteRef {
-    remote: String,
-    refname: RefName,
+    pub remote: String,
+    pub refname: RefName,
 }
 
 #[derive(Debug, PartialEq, Eq)]

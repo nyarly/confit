@@ -21,10 +21,10 @@ pub struct Status {
 
 #[derive(Debug, PartialEq)]
 pub struct Branch {
-    pub oid: Oid,   //(intial): None, or Some("0a03ba3cfde6472cb7431958dd78ca2c0d65de74")
-    pub head: Head, //: None for (detached) or Some("bulk_update_api")
-    pub upstream: Option<RefName>, //: "origin/bulk_update_api",
-    pub commits: Option<TrackingCounts>, //: TrackingCounts(0,0),
+    pub oid: Oid,
+    pub head: Head,
+    pub upstream: Option<RefName>,
+    pub commits: Option<TrackingCounts>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -74,7 +74,7 @@ pub enum StatusLine {
 #[derive(Debug, PartialEq)]
 pub enum Oid {
     Initial,
-    Commit(RefName),
+    Commit(ObjectName),
 }
 
 #[derive(Debug, PartialEq)]
