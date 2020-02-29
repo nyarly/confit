@@ -19,7 +19,7 @@ pub struct Status {
     pub lines: Vec<StatusLine>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Branch {
     pub oid: Oid,
     pub head: Head,
@@ -71,13 +71,13 @@ pub enum StatusLine {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Oid {
     Initial,
     Commit(ObjectName),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Head {
     Detached,
     Branch(RefName),

@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while},
-    combinator::{map, map_res},
+    combinator::{opt, map, map_res},
     multi::{many0, separated_nonempty_list},
     sequence::{delimited, terminated, tuple},
     //multi::many0,
@@ -13,13 +13,14 @@ use chrono::{DateTime, Utc};
 
 /*
  *
- * git for-each-ref --shell --format "%(objectname) %(objecttype) %(refname) %(upstream) %(upstream:remotename) %(upstream:track) %(creator)"
+ * git for-each-ref --shell --format "%(objectname) %(*objectname) %(objecttype) %(refname) %(upstream) %(upstream:remotename) %(upstream:track) %(creator)"
  * '8558b6934276f1b9966c01f7b3e5aeea2902742d' 'commit' 'refs/heads/multiple_provisioning' 'refs/remotes/origin/multiple_provisioning' 'origin' '[ahead 1]' 'Judson <nyarly@gmail.com> 1572973200 -0800'
  */
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RefLine {
     pub object_name: ObjectName,
+    pub referred_object: Option<ObjectName>,
     pub object_type: ObjectType,
     pub local_ref: RefName,
     pub upstream: TrackSync,
@@ -87,6 +88,8 @@ fn line(input: &str) -> IResult<&str, RefLine> {
             _,
             object_name,
             _,
+            referred_object,
+            _,
             ot,
             _,
             local_ref,
@@ -103,6 +106,8 @@ fn line(input: &str) -> IResult<&str, RefLine> {
     ) = tuple((
         tag("'"),       // '
         sha,            // 8558b6934276f1b9966c01f7b3e5aeea2902742d
+        tag("' '"),     // ' '
+        opt(sha),            // 8558b6934276f1b9966c01f7b3e5aeea2902742d
         tag("' '"),     // ' '
         object_type,    // commit
         tag("' '"),     // ' '
@@ -122,6 +127,7 @@ fn line(input: &str) -> IResult<&str, RefLine> {
         rest,
         RefLine {
             object_name,
+            referred_object,
             object_type: ot,
             local_ref,
             upstream: (remote, refname, ts).into(),
@@ -294,10 +300,11 @@ mod tests {
     #[test]
     fn line_parse() {
         assert_eq!(
-            line("'f8f49343edaa2a1e6903cbad13ddbc50ad9e12d2' 'commit' 'refs/heads/along' 'refs/remotes/along/mezzo' 'along' '' 'Judson <nyarly@gmail.com> 1570644797 -0700'"),
+            line("'f8f49343edaa2a1e6903cbad13ddbc50ad9e12d2' '' 'commit' 'refs/heads/along' 'refs/remotes/along/mezzo' 'along' '' 'Judson <nyarly@gmail.com> 1570644797 -0700'"),
             Ok(("", RefLine{
                 local_ref: "refs/heads/along".into(),
                 object_name: "f8f49343edaa2a1e6903cbad13ddbc50ad9e12d2".into(),
+                referred_object: None,
                 object_type: ObjectType::Commit,
                 upstream: TrackSync::Track{
                     counts: TrackingCounts(0,0),

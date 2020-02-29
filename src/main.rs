@@ -11,17 +11,28 @@ fn main() -> Result<(), git::Error> {
         .arg(
             Arg::with_name("debug")
                 .long("debug")
-                .help("outputs debug data"),
+                .help("outputs debug data")
         )
         .arg(
             Arg::with_name("quiet")
                 .long("quiet")
                 .short("q")
-                .help("suppress normal state summary; scripts can rely on the status code"),
+                .help("suppress normal state summary; scripts can rely on the status code")
         )
+        .arg(
+            Arg::with_name("local only")
+            .long("local")
+            .short("l")
+            .help("do not access remote repos")
+            )
         .get_matches();
 
-    let ls_remote = git::ls_remote()?;
+    let ls_remote = if opt.is_present("local only") {
+        vec![]
+    } else {
+        git::ls_remote()?
+    };
+
     let status = git::status()?;
     let for_each_ref = git::for_each_ref()?;
 

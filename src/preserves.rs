@@ -65,7 +65,7 @@ impl Item {
         });
 
         Item {
-            name: "no unstaged changes",
+            name: "all files tracked",
             passed,
         }
     }
@@ -117,7 +117,7 @@ impl Item {
     }
 
     fn detached_head(s: &Summary) -> Self {
-        let passed = s.status.branch.map_or(false, |b| b.head != Head::Detached);
+        let passed = s.status.branch.clone().map_or(false, |b| b.head != Head::Detached);
         Item {
             name: "commit tracked by local ref",
             passed,
@@ -125,7 +125,7 @@ impl Item {
     }
 
     fn untracked_branch(s: &Summary) -> Self {
-        let passed = s.status.branch.map_or(false, |b| b.upstream.is_some());
+        let passed = s.status.branch.clone().map_or(false, |b| b.upstream.is_some());
         Item {
             name: "branch tracks remote",
             passed,
@@ -133,7 +133,7 @@ impl Item {
     }
 
     fn remote_changes(s: &Summary) -> Self {
-        let passed = s.status.branch.map_or(false, |b| {
+        let passed = s.status.branch.clone().map_or(false, |b| {
             b.commits
                 .map_or(false, |TrackingCounts(_, behind)| behind == 0)
         });
@@ -144,7 +144,7 @@ impl Item {
     }
 
     fn unpushed_commit(s: &Summary) -> Self {
-        let passed = s.status.branch.map_or(false, |b| {
+        let passed = s.status.branch.clone().map_or(false, |b| {
             b.commits
                 .map_or(false, |TrackingCounts(ahead, _)| ahead == 0)
         });
@@ -155,9 +155,9 @@ impl Item {
     }
 
     fn untagged_commit(s: &Summary) -> Self {
-        let passed = if let Some(oid) = s.status.branch.map(|b| b.oid) {
+        let passed = if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
             if let Oid::Commit(c) = oid {
-                s.for_each_ref.iter().any(|rl| rl.object_type == Tag && rl.object_name == c)
+                s.for_each_ref.iter().any(|rl| rl.object_type == Tag && rl.referred_object.clone().map(|ro| ro == c).unwrap_or(false))
             } else { false }
         } else { false };
 
@@ -171,8 +171,9 @@ impl Item {
 
 impl fmt::Display for Summary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let width = self.items().iter().map(|i| i.name.len()).max();
         for i in self.items() {
-            writeln!(f, "{}", i)?;
+            writeln!(f, "  {:>width$}: {}", i.name, i.passed, width = width.unwrap_or(0))?;
         }
         Ok(())
     }

@@ -29,7 +29,7 @@ pub fn for_each_ref() -> Result<Output> {
        .arg("for-each-ref")
        .arg("--shell") // escapes fields
        .arg("--format")
-       .arg("%(objectname) %(objecttype) %(refname) %(upstream) %(upstream:remotename) %(upstream:track) %(creator)")
+       .arg("%(objectname) %(*objectname) %(objecttype) %(refname) %(upstream) %(upstream:remotename) %(upstream:track) %(creator)")
        .output()?
        )
 }

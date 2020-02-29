@@ -20,7 +20,7 @@ pub use for_each_ref::parse as for_each_ref;
 pub use ls_remote::parse as ls_remote;
 pub use status::parse as status;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ObjectName(String);
 
 impl From<&str> for ObjectName {
@@ -29,7 +29,7 @@ impl From<&str> for ObjectName {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RefName(String);
 
 impl From<&str> for RefName {
@@ -53,7 +53,7 @@ impl From<&str> for WorkPath {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct TrackingCounts(pub u64, pub u64);
 
 
