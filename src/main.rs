@@ -55,15 +55,8 @@ fn main() -> Result<(), git::Error> {
 
 /*
  * Args:
- * network access
  * color output
+ * tracking scenarios
+ * tracking selections
  *
- * Tracking violations:
- * unstaged changes
- * uncommitted changes
- * untracked files
- * untracked branch
- * unpushed commit
- * untagged commit
- * remote changes (unpulled)
  */

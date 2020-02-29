@@ -11,11 +11,187 @@ pub struct Summary {
     for_each_ref: Vec<git::RefLine>,
 }
 
-struct Item {
-    name: &'static str,
+struct Item<'a> {
+    check: &'a Check,
     passed: bool,
 }
 
+struct Check {
+    label: &'static str,
+    tag: &'static str,
+    description: &'static str,
+    status_group: u8,
+    eval: fn(&Summary) -> bool,
+}
+
+static ALL_CHECKS: [Check; 9] = [
+    Check{
+        label: "all files tracked",
+        tag: "track_files",
+        description: "no files in the workspace are untracked",
+        status_group: 1,
+        eval: untracked_files,
+    },
+    Check {
+        label: "no unstaged changes",
+        tag: "stage",
+        description: "",
+        status_group: 1,
+        eval: modified_files,
+    },
+    Check {
+        label: "no uncommited changes",
+        tag: "commit",
+        description: "",
+        status_group: 1,
+        eval: uncommited_changes,
+    },
+    Check {
+        label: "commit tracked by local ref",
+        tag: "detached",
+        description: "",
+        status_group: 1,
+        eval: detached_head,
+    },
+    Check {
+        label: "branch tracks remote",
+        tag: "track_remote",
+        description: "",
+        status_group: 2,
+        eval: untracked_branch,
+    },
+    Check {
+        label: "all commits merged from remote",
+        tag: "merge",
+        description: "",
+        status_group: 3,
+        eval: remote_changes,
+    },
+    Check {
+        label: "all commits pushed to remote",
+        tag: "push",
+        description: "",
+        status_group: 2,
+        eval: unpushed_commit,
+    },
+    Check {
+        label: "current commit is tagged",
+        tag: "tag",
+        description: "",
+        status_group: 4,
+        eval: untagged_commit,
+    },
+    Check {
+        label: "tag is pushed",
+        tag: "push_tag",
+        description: "",
+        status_group: 4,
+        eval: unpushed_tag,
+    },
+];
+
+fn untracked_files(s: &Summary) -> bool {
+    s.status.lines.iter().all(|line| match line {
+        Untracked { .. } => false,
+        _ => true,
+    })
+}
+
+fn modified_files(s: &Summary) -> bool {
+     s.status.lines.iter().all(|line| match line {
+        One {
+            status: StatusPair { unstaged: m, .. },
+            ..
+        }
+        | Two {
+            status: StatusPair { unstaged: m, .. },
+            ..
+        }
+        | Unmerged {
+            status: StatusPair { unstaged: m, .. },
+            ..
+        } if *m != LineStatus::Unmodified => false,
+        _ => true,
+    })
+}
+
+fn uncommited_changes(s: &Summary) -> bool {
+     s.status.lines.iter().all(|line| match line {
+        One {
+            status: StatusPair { staged: m, .. },
+            ..
+        }
+        | Two {
+            status: StatusPair { staged: m, .. },
+            ..
+        }
+        | Unmerged {
+            status: StatusPair { staged: m, .. },
+            ..
+        } if *m != LineStatus::Unmodified => false,
+        _ => true,
+    })
+
+}
+
+fn detached_head(s: &Summary) -> bool {
+     s.status
+        .branch
+        .clone()
+        .map_or(false, |b| b.head != Head::Detached)
+}
+
+fn untracked_branch(s: &Summary) -> bool {
+     s
+        .status
+        .branch
+        .clone()
+        .map_or(false, |b| b.upstream.is_some())
+}
+
+fn remote_changes(s: &Summary) -> bool {
+     s.status.branch.clone().map_or(false, |b| {
+        b.commits
+            .map_or(false, |TrackingCounts(_, behind)| behind == 0)
+    })
+}
+
+fn unpushed_commit(s: &Summary) -> bool {
+     s.status.branch.clone().map_or(false, |b| {
+        b.commits
+            .map_or(false, |TrackingCounts(ahead, _)| ahead == 0)
+    })
+}
+
+fn untagged_commit(s: &Summary) -> bool {
+     if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
+        if let Oid::Commit(c) = oid {
+            s.tag_on_commit(c).is_some()
+        } else {
+            false
+        }
+    } else {
+        false
+    }
+
+}
+
+fn unpushed_tag(s: &Summary) -> bool {
+     if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
+        if let Oid::Commit(c) = oid {
+            if let Some(t) = s.tag_on_commit(c) {
+                s.ls_remote.iter().any(|rp| rp.refname == t)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    } else {
+        false
+    }
+
+}
 /// Collects and reports reasons that your current workspace
 /// could not be reproduced on another workstation, in another place or time.
 impl Summary {
@@ -32,28 +208,17 @@ impl Summary {
     }
 
     fn items(&self) -> Vec<Item> {
-        vec![
-            Item::untracked_files(self),
-            Item::modified_files(self),
-            Item::uncommited_changes(self),
-            Item::detached_head(self),
-            Item::untracked_branch(self),
-            Item::unpushed_commit(self),
-            Item::remote_changes(self),
-            Item::untagged_commit(self),
-            Item::unpushed_tag(self),
-        ]
+        ALL_CHECKS.iter().map(|ch| Item::build(ch, self)).collect()
     }
 
     pub fn exit_status(&self) -> i32 {
         self.items()
             .iter()
-            .enumerate()
-            .fold(0, |status, (n, item)| {
+            .fold(0, |status, item| {
                 if item.passed {
                     status
                 } else {
-                    status + (1 << n)
+                    status | (1 << item.check.status_group)
                 }
             })
     }
@@ -72,159 +237,25 @@ impl Summary {
             .map(|rl| rl.object_name.clone())
     }
 }
-impl Item {
-    fn untracked_files(s: &Summary) -> Self {
-        let passed = s.status.lines.iter().all(|line| match line {
-            Untracked { .. } => false,
-            _ => true,
-        });
 
-        Item {
-            name: "all files tracked",
-            passed,
+impl<'a> Item<'a> {
+    fn build(check: &'a Check, summary: &Summary) -> Self {
+        Item{
+            check,
+            passed: (check.eval)(summary),
         }
     }
 
-    fn modified_files(s: &Summary) -> Self {
-        let passed = s.status.lines.iter().all(|line| match line {
-            One {
-                status: StatusPair { unstaged: m, .. },
-                ..
-            }
-            | Two {
-                status: StatusPair { unstaged: m, .. },
-                ..
-            }
-            | Unmerged {
-                status: StatusPair { unstaged: m, .. },
-                ..
-            } if *m != LineStatus::Unmodified => false,
-            _ => true,
-        });
-
-        Item {
-            name: "no unstaged changes",
-            passed,
-        }
-    }
-
-    fn uncommited_changes(s: &Summary) -> Self {
-        let passed = s.status.lines.iter().all(|line| match line {
-            One {
-                status: StatusPair { staged: m, .. },
-                ..
-            }
-            | Two {
-                status: StatusPair { staged: m, .. },
-                ..
-            }
-            | Unmerged {
-                status: StatusPair { staged: m, .. },
-                ..
-            } if *m != LineStatus::Unmodified => false,
-            _ => true,
-        });
-
-        Item {
-            name: "no uncommited changes",
-            passed,
-        }
-    }
-
-    fn detached_head(s: &Summary) -> Self {
-        let passed = s
-            .status
-            .branch
-            .clone()
-            .map_or(false, |b| b.head != Head::Detached);
-        Item {
-            name: "commit tracked by local ref",
-            passed,
-        }
-    }
-
-    fn untracked_branch(s: &Summary) -> Self {
-        let passed = s
-            .status
-            .branch
-            .clone()
-            .map_or(false, |b| b.upstream.is_some());
-        Item {
-            name: "branch tracks remote",
-            passed,
-        }
-    }
-
-    fn remote_changes(s: &Summary) -> Self {
-        let passed = s.status.branch.clone().map_or(false, |b| {
-            b.commits
-                .map_or(false, |TrackingCounts(_, behind)| behind == 0)
-        });
-        Item {
-            name: "all commits merged from remote",
-            passed,
-        }
-    }
-
-    fn unpushed_commit(s: &Summary) -> Self {
-        let passed = s.status.branch.clone().map_or(false, |b| {
-            b.commits
-                .map_or(false, |TrackingCounts(ahead, _)| ahead == 0)
-        });
-        Item {
-            name: "all commits pushed to remote",
-            passed,
-        }
-    }
-
-    fn untagged_commit(s: &Summary) -> Self {
-        let passed = if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
-            if let Oid::Commit(c) = oid {
-                s.tag_on_commit(c).is_some()
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
-        Item {
-            name: "current commit is tagged",
-            passed,
-        }
-    }
-
-    fn unpushed_tag(s: &Summary) -> Self {
-        let passed = if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
-            if let Oid::Commit(c) = oid {
-                if let Some(t) = s.tag_on_commit(c) {
-                    s.ls_remote.iter().any(|rp| rp.refname == t)
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
-        Item {
-            name: "tag is pushed",
-            passed,
-        }
-
-    }
 }
 
 impl fmt::Display for Summary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let width = self.items().iter().map(|i| i.name.len()).max();
+        let width = self.items().iter().map(|i| i.check.label.len()).max();
         for i in self.items() {
             writeln!(
                 f,
                 "  {:>width$}: {}",
-                i.name,
+                i.check.label,
                 i.passed,
                 width = width.unwrap_or(0)
             )?;
@@ -233,8 +264,8 @@ impl fmt::Display for Summary {
     }
 }
 
-impl fmt::Display for Item {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.name, self.passed)
+impl<'a> fmt::Display for Item<'a> {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.check.label, self.passed)
     }
 }
