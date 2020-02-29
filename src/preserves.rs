@@ -1,6 +1,10 @@
 use crate::git;
 use std::fmt;
 
+use git::parse::for_each_ref::ObjectType::*;
+use git::parse::status::{Head, LineStatus, Oid, StatusLine::*, StatusPair};
+use git::parse::{ObjectName, TrackingCounts};
+
 pub struct Summary {
     status: git::Status,
     ls_remote: Vec<git::RefPair>,
@@ -37,6 +41,7 @@ impl Summary {
             Item::unpushed_commit(self),
             Item::remote_changes(self),
             Item::untagged_commit(self),
+            Item::unpushed_tag(self),
         ]
     }
 
@@ -52,11 +57,21 @@ impl Summary {
                 }
             })
     }
-}
 
-use git::parse::status::{Head, LineStatus, StatusLine::*, StatusPair, Oid};
-use git::parse::for_each_ref::ObjectType::*;
-use git::parse::TrackingCounts;
+    fn tag_on_commit(&self, c: ObjectName) -> Option<ObjectName> {
+        self.for_each_ref
+            .iter()
+            .find(|rl| {
+                rl.object_type == Tag
+                    && rl
+                        .referred_object
+                        .clone()
+                        .map(|ro| ro == c)
+                        .unwrap_or(false)
+            })
+            .map(|rl| rl.object_name.clone())
+    }
+}
 impl Item {
     fn untracked_files(s: &Summary) -> Self {
         let passed = s.status.lines.iter().all(|line| match line {
@@ -117,7 +132,11 @@ impl Item {
     }
 
     fn detached_head(s: &Summary) -> Self {
-        let passed = s.status.branch.clone().map_or(false, |b| b.head != Head::Detached);
+        let passed = s
+            .status
+            .branch
+            .clone()
+            .map_or(false, |b| b.head != Head::Detached);
         Item {
             name: "commit tracked by local ref",
             passed,
@@ -125,7 +144,11 @@ impl Item {
     }
 
     fn untracked_branch(s: &Summary) -> Self {
-        let passed = s.status.branch.clone().map_or(false, |b| b.upstream.is_some());
+        let passed = s
+            .status
+            .branch
+            .clone()
+            .map_or(false, |b| b.upstream.is_some());
         Item {
             name: "branch tracks remote",
             passed,
@@ -157,12 +180,37 @@ impl Item {
     fn untagged_commit(s: &Summary) -> Self {
         let passed = if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
             if let Oid::Commit(c) = oid {
-                s.for_each_ref.iter().any(|rl| rl.object_type == Tag && rl.referred_object.clone().map(|ro| ro == c).unwrap_or(false))
-            } else { false }
-        } else { false };
+                s.tag_on_commit(c).is_some()
+            } else {
+                false
+            }
+        } else {
+            false
+        };
 
         Item {
             name: "current commit is tagged",
+            passed,
+        }
+    }
+
+    fn unpushed_tag(s: &Summary) -> Self {
+        let passed = if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
+            if let Oid::Commit(c) = oid {
+                if let Some(t) = s.tag_on_commit(c) {
+                    s.ls_remote.iter().any(|rp| rp.refname == t)
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        Item {
+            name: "tag is pushed",
             passed,
         }
 
@@ -173,7 +221,13 @@ impl fmt::Display for Summary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let width = self.items().iter().map(|i| i.name.len()).max();
         for i in self.items() {
-            writeln!(f, "  {:>width$}: {}", i.name, i.passed, width = width.unwrap_or(0))?;
+            writeln!(
+                f,
+                "  {:>width$}: {}",
+                i.name,
+                i.passed,
+                width = width.unwrap_or(0)
+            )?;
         }
         Ok(())
     }

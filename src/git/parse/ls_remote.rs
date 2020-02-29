@@ -10,8 +10,8 @@ use super::{filepath, settle_parse_result, sha, ObjectName, WorkPath};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RefPair {
-    refname: ObjectName,
-    path: WorkPath,
+    pub refname: ObjectName,
+    pub path: WorkPath,
 }
 
 impl From<(ObjectName, WorkPath)> for RefPair {
