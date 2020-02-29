@@ -42,6 +42,10 @@ fn main() -> Result<(), git::Error> {
 
     let summary = preserves::Summary::new(ls_remote, status, for_each_ref);
 
+    if opt.is_present("debug") {
+        print!("will exit: {}", summary.exit_status())
+    }
+
     if !opt.is_present("quiet") {
         print!("{}", summary)
     }
