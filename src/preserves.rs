@@ -16,12 +16,18 @@ struct Item<'a> {
     passed: bool,
 }
 
-struct Check {
+pub struct Check {
     label: &'static str,
     tag: &'static str,
     description: &'static str,
     status_group: u8,
     eval: fn(&Summary) -> bool,
+}
+
+impl Check {
+    pub fn all_tags() -> Vec<&'static str> {
+        ALL_CHECKS.iter().map(|ch| ch.tag).collect()
+    }
 }
 
 static ALL_CHECKS: [Check; 9] = [

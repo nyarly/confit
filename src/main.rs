@@ -2,6 +2,7 @@ mod git;
 mod preserves;
 
 use clap::{App, Arg};
+use preserves::{Check, Summary};
 
 fn main() -> Result<(), git::Error> {
     let opt = App::new("Confit")
@@ -25,6 +26,12 @@ fn main() -> Result<(), git::Error> {
             .short("l")
             .help("do not access remote repos")
             )
+        .arg(
+            Arg::with_name("checks")
+            .short("checks")
+            .use_delimiter(true)
+            .takes_value(true)
+            .possible_values(&Check::all_tags()))
         .get_matches();
 
     let ls_remote = if opt.is_present("local only") {
@@ -40,7 +47,7 @@ fn main() -> Result<(), git::Error> {
         println!("{:#?}\n{:#?}\n{:#?}", status, for_each_ref, ls_remote);
     }
 
-    let summary = preserves::Summary::new(ls_remote, status, for_each_ref);
+    let summary = Summary::new(ls_remote, status, for_each_ref);
 
     if opt.is_present("debug") {
         print!("will exit: {}", summary.exit_status())
@@ -52,6 +59,17 @@ fn main() -> Result<(), git::Error> {
 
     std::process::exit(summary.exit_status())
 }
+
+/* Stages of execution:
+ * Hassle Git for data
+ *   - only need data that active checks care about
+ * Interpret data with Checks
+ *   - only run requested checks
+ * Format interpretations
+ *   - many options here
+ * Exit status per interpretations
+ *   - only active
+ */
 
 /*
  * Args:
