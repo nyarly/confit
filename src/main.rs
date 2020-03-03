@@ -31,8 +31,15 @@ fn main() -> Result<(), git::Error> {
             .short("checks")
             .use_delimiter(true)
             .takes_value(true)
+            .multiple(true)
             .possible_values(&Check::all_tags()))
         .get_matches();
+
+    let checks = if let Some(tags) = opt.values_of("checks") {
+        Check::tagged_checks(tags)
+    } else {
+        Check::all_checks()
+    };
 
     let ls_remote = if opt.is_present("local only") {
         vec![]
@@ -47,7 +54,7 @@ fn main() -> Result<(), git::Error> {
         println!("{:#?}\n{:#?}\n{:#?}", status, for_each_ref, ls_remote);
     }
 
-    let summary = Summary::new(ls_remote, status, for_each_ref);
+    let summary = Summary::new(ls_remote, status, for_each_ref, checks);
 
     if opt.is_present("debug") {
         print!("will exit: {}", summary.exit_status())
@@ -61,6 +68,7 @@ fn main() -> Result<(), git::Error> {
 }
 
 /* Stages of execution:
+ * Choose Checks
  * Hassle Git for data
  *   - only need data that active checks care about
  * Interpret data with Checks

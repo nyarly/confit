@@ -5,10 +5,11 @@ use git::parse::for_each_ref::ObjectType::*;
 use git::parse::status::{Head, LineStatus, Oid, StatusLine::*, StatusPair};
 use git::parse::{ObjectName, TrackingCounts};
 
-pub struct Summary {
+pub struct Summary<'a> {
     status: git::Status,
     ls_remote: Vec<git::RefPair>,
     for_each_ref: Vec<git::RefLine>,
+    checks: Vec<&'a Check>,
 }
 
 struct Item<'a> {
@@ -25,6 +26,14 @@ pub struct Check {
 }
 
 impl Check {
+    pub fn all_checks<'a>() -> Vec<&'a Check> {
+        ALL_CHECKS.iter().collect()
+    }
+
+    pub fn tagged_checks<'a, 'b>(mut tags: impl Iterator<Item=&'b str>) -> Vec<&'a Check> {
+        ALL_CHECKS.iter().filter(|ch| tags.any(|t| t == ch.tag) ).collect()
+    }
+
     pub fn all_tags() -> Vec<&'static str> {
         ALL_CHECKS.iter().map(|ch| ch.tag).collect()
     }
@@ -200,21 +209,23 @@ fn unpushed_tag(s: &Summary) -> bool {
 }
 /// Collects and reports reasons that your current workspace
 /// could not be reproduced on another workstation, in another place or time.
-impl Summary {
+impl<'a> Summary<'a> {
     pub fn new(
         ls_remote: Vec<git::RefPair>,
         status: git::Status,
         for_each_ref: Vec<git::RefLine>,
+        checks: Vec<&'a Check>,
     ) -> Self {
         Summary {
             ls_remote,
             status,
             for_each_ref,
+            checks,
         }
     }
 
     fn items(&self) -> Vec<Item> {
-        ALL_CHECKS.iter().map(|ch| Item::build(ch, self)).collect()
+        self.checks.iter().map(|ch| Item::build(ch, self)).collect()
     }
 
     pub fn exit_status(&self) -> i32 {
@@ -254,7 +265,7 @@ impl<'a> Item<'a> {
 
 }
 
-impl fmt::Display for Summary {
+impl fmt::Display for Summary<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let width = self.items().iter().map(|i| i.check.label.len()).max();
         for i in self.items() {
@@ -270,7 +281,7 @@ impl fmt::Display for Summary {
     }
 }
 
-impl<'a> fmt::Display for Item<'a> {
+impl fmt::Display for Item<'_> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.check.label, self.passed)
     }
