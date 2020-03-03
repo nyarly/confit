@@ -5,6 +5,43 @@ use git::parse::for_each_ref::ObjectType::*;
 use git::parse::status::{Head, LineStatus, Oid, StatusLine::*, StatusPair};
 use git::parse::{ObjectName, TrackingCounts};
 
+pub mod datasource {
+    #[derive(Clone, Copy)]
+    pub struct Group(u16);
+
+    impl Group {
+        pub fn includes(self, item: Group) -> bool {
+            (self.0 & item.0) != 0
+        }
+    }
+
+    impl std::fmt::Debug for Group {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+            write!(f, "Group({:#x})", self.0)
+        }
+    }
+
+    use std::ops::BitOr;
+    impl BitOr for Group {
+        type Output = Self;
+
+        fn bitor(self, rhs: Self) -> Self {
+            Group(self.0 | rhs.0)
+        }
+    }
+
+    pub const EMPTY: Group = Group(0);
+
+    pub const STATUS: Group = Group(1);
+    pub const REFS: Group = Group(1 << 1);
+    pub const REMOTE: Group = Group(1 << 2);
+
+    pub const fn union(l: Group, r: Group) -> Group {
+        Group(l.0 | r.0)
+    }
+
+}
+
 pub struct Summary<'a> {
     status: git::Status,
     ls_remote: Vec<git::RefPair>,
@@ -22,6 +59,7 @@ pub struct Check {
     tag: &'static str,
     description: &'static str,
     status_group: u8,
+    required_data: datasource::Group,
     eval: fn(&Summary) -> bool,
 }
 
@@ -30,8 +68,8 @@ impl Check {
         ALL_CHECKS.iter().collect()
     }
 
-    pub fn tagged_checks<'a, 'b>(mut tags: impl Iterator<Item=&'b str>) -> Vec<&'a Check> {
-        ALL_CHECKS.iter().filter(|ch| tags.any(|t| t == ch.tag) ).collect()
+    pub fn tagged_checks<'a, 'b>(tags: impl Clone + IntoIterator<Item=&'b str>) -> Vec<&'a Check> {
+        ALL_CHECKS.iter().filter(move |ch| tags.clone().into_iter().any(|t|  t == ch.tag) ).collect()
     }
 
     pub fn all_tags() -> Vec<&'static str> {
@@ -39,12 +77,25 @@ impl Check {
     }
 }
 
+pub trait CheckList {
+    fn required_sources(&mut self) -> datasource::Group;
+}
+
+impl CheckList for Vec<&Check> {
+    fn required_sources(&mut self) -> datasource::Group {
+        self.iter().fold(datasource::EMPTY, |acc, check| acc | check.required_data)
+    }
+}
+
+use datasource::{STATUS, REFS, REMOTE, union};
+
 static ALL_CHECKS: [Check; 9] = [
     Check{
         label: "all files tracked",
         tag: "track_files",
         description: "no files in the workspace are untracked",
         status_group: 1,
+        required_data: STATUS,
         eval: untracked_files,
     },
     Check {
@@ -52,6 +103,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "stage",
         description: "",
         status_group: 1,
+        required_data: STATUS,
         eval: modified_files,
     },
     Check {
@@ -59,6 +111,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "commit",
         description: "",
         status_group: 1,
+        required_data: STATUS,
         eval: uncommited_changes,
     },
     Check {
@@ -66,6 +119,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "detached",
         description: "",
         status_group: 1,
+        required_data: STATUS,
         eval: detached_head,
     },
     Check {
@@ -73,6 +127,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "track_remote",
         description: "",
         status_group: 2,
+        required_data: STATUS,
         eval: untracked_branch,
     },
     Check {
@@ -80,6 +135,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "merge",
         description: "",
         status_group: 3,
+        required_data: union(STATUS, REMOTE),
         eval: remote_changes,
     },
     Check {
@@ -87,6 +143,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "push",
         description: "",
         status_group: 2,
+        required_data: STATUS,
         eval: unpushed_commit,
     },
     Check {
@@ -94,6 +151,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "tag",
         description: "",
         status_group: 4,
+        required_data: union(STATUS, REFS),
         eval: untagged_commit,
     },
     Check {
@@ -101,6 +159,7 @@ static ALL_CHECKS: [Check; 9] = [
         tag: "push_tag",
         description: "",
         status_group: 4,
+        required_data: union(STATUS, REMOTE),
         eval: unpushed_tag,
     },
 ];

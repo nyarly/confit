@@ -19,6 +19,15 @@ pub struct Status {
     pub lines: Vec<StatusLine>,
 }
 
+impl Default for Status {
+    fn default() -> Self {
+        Status {
+            branch: None,
+            lines: vec![],
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Branch {
     pub oid: Oid,

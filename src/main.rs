@@ -2,7 +2,7 @@ mod git;
 mod preserves;
 
 use clap::{App, Arg};
-use preserves::{Check, Summary};
+use preserves::{Check, Summary, CheckList, datasource::{STATUS, REFS, REMOTE}};
 
 fn main() -> Result<(), git::Error> {
     let opt = App::new("Confit")
@@ -21,12 +21,6 @@ fn main() -> Result<(), git::Error> {
                 .help("suppress normal state summary; scripts can rely on the status code")
         )
         .arg(
-            Arg::with_name("local only")
-            .long("local")
-            .short("l")
-            .help("do not access remote repos")
-            )
-        .arg(
             Arg::with_name("checks")
             .short("checks")
             .use_delimiter(true)
@@ -35,20 +29,35 @@ fn main() -> Result<(), git::Error> {
             .possible_values(&Check::all_tags()))
         .get_matches();
 
-    let checks = if let Some(tags) = opt.values_of("checks") {
+    let mut checks = if let Some(tags) = opt.values_of("checks") {
         Check::tagged_checks(tags)
     } else {
         Check::all_checks()
     };
 
-    let ls_remote = if opt.is_present("local only") {
-        vec![]
-    } else {
+    let reqs = checks.required_sources();
+
+    if opt.is_present("debug") {
+        println!("Required sources: {:?}", reqs)
+    }
+
+    let ls_remote = if reqs.includes(REMOTE) {
         git::ls_remote()?
+    } else {
+        vec![]
     };
 
-    let status = git::status()?;
-    let for_each_ref = git::for_each_ref()?;
+    let status = if reqs.includes(STATUS) {
+        git::status()?
+    } else {
+        git::Status::default()
+    };
+
+    let for_each_ref = if reqs.includes(REFS) {
+        git::for_each_ref()?
+    } else {
+        vec![]
+    };
 
     if opt.is_present("debug") {
         println!("{:#?}\n{:#?}\n{:#?}", status, for_each_ref, ls_remote);
