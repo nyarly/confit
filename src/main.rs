@@ -92,6 +92,5 @@ fn main() -> Result<(), git::Error> {
  * Args:
  * color output
  * tracking scenarios
- * tracking selections
  *
  */
