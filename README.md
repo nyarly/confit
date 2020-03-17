@@ -2,7 +2,7 @@
 
 Making sure your work is properly preserved!
 
-(./jar.png)
+![Confit](./jar.svg)
 
 
 ## Future work
