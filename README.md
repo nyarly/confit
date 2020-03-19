@@ -56,7 +56,7 @@ Thus, Confit was inspired.
 
 ## License
 
-As you can see in the [LICENSE](./LICENSE) file,
+As you can see in the [LICENSE.md](./LICENSE) file,
 Confit is licensed under the LicenseZero Prosperity license.
 In part, this is to help normalize the idea of supporting
 public software development.
