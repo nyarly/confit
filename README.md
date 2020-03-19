@@ -54,9 +54,12 @@ no single tool answers the question
 "is this code complete and properly saved?"
 Thus, Confit was inspired.
 
-## License
+## Licensing
 
-As you can see in the [LICENSE](./LICENSE.md) file,
-Confit is licensed under the LicenseZero Prosperity license.
-In part, this is to help normalize the idea of supporting
-public software development.
+This package is free to use for commercial purposes for a trial period under the terms of the [Prosperity Public License](./LICENSE).
+
+Licenses for long-term commercial use are available via [licensezero.com](https://licensezero.com).
+This license was chosen, in part, to help normalize
+the financial support of public software.
+
+[![licensezero.com pricing](https://licensezero.com/projects/a6df04f4-46e4-41d1-afe2-74a401be542a/badge.svg)](https://licensezero.com/projects/a6df04f4-46e4-41d1-afe2-74a401be542a)
