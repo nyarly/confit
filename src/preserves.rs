@@ -51,7 +51,7 @@ pub struct Summary<'a> {
 
 struct Item<'a> {
     check: &'a Check,
-    passed: bool,
+    enormity: u16,
 }
 
 pub struct Check {
@@ -60,7 +60,8 @@ pub struct Check {
     description: &'static str,
     status_group: u8,
     required_data: datasource::Group,
-    eval: fn(&Summary) -> bool,
+    threshold: u16,
+    eval: fn(&Summary) -> u16,
 }
 
 impl Check {
@@ -164,81 +165,98 @@ static ALL_CHECKS: [Check; 9] = [
     },
 ];
 
-fn untracked_files(s: &Summary) -> bool {
-    s.status.lines.iter().all(|line| match line {
+fn untracked_files(s: &Summary) -> u16 {
+    s.status
+      .lines
+      .iter()
+      .filter(|line| match line {
         Untracked { .. } => false,
         _ => true,
-    })
+      })
+      .count() as u16
 }
 
-fn modified_files(s: &Summary) -> bool {
-     s.status.lines.iter().all(|line| match line {
-        One {
-            status: StatusPair { unstaged: m, .. },
-            ..
-        }
-        | Two {
-            status: StatusPair { unstaged: m, .. },
-            ..
-        }
-        | Unmerged {
-            status: StatusPair { unstaged: m, .. },
-            ..
-        } if *m != LineStatus::Unmodified => false,
-        _ => true,
-    })
+fn modified_files(s: &Summary) -> u16 {
+     s.status
+       .lines
+       .iter()
+       .filter(|line| match line {
+         One {
+           status: StatusPair { unstaged: m, .. },
+           ..
+         }
+         | Two {
+           status: StatusPair { unstaged: m, .. },
+           ..
+         }
+         | Unmerged {
+           status: StatusPair { unstaged: m, .. },
+           ..
+         } if *m != LineStatus::Unmodified => false,
+         _ => true,
+       })
+     .count() as u16
 }
 
-fn uncommited_changes(s: &Summary) -> bool {
-     s.status.lines.iter().all(|line| match line {
-        One {
-            status: StatusPair { staged: m, .. },
-            ..
-        }
-        | Two {
-            status: StatusPair { staged: m, .. },
-            ..
-        }
-        | Unmerged {
-            status: StatusPair { staged: m, .. },
-            ..
-        } if *m != LineStatus::Unmodified => false,
-        _ => true,
-    })
+fn uncommited_changes(s: &Summary) -> u16 {
+     s.status
+       .lines
+       .iter()
+       .filter(|line| match line {
+         One {
+           status: StatusPair { staged: m, .. },
+           ..
+         }
+         | Two {
+           status: StatusPair { staged: m, .. },
+           ..
+         }
+         | Unmerged {
+           status: StatusPair { staged: m, .. },
+           ..
+         } if *m != LineStatus::Unmodified => false,
+         _ => true,
+       })
+     .count() as u16
 
 }
 
-fn detached_head(s: &Summary) -> bool {
+fn detached_head(s: &Summary) -> u16 {
      s.status
         .branch
         .clone()
-        .map_or(false, |b| b.head != Head::Detached)
+        .map_or(false, |b| b.head != Head::Detached) as u16
 }
 
-fn untracked_branch(s: &Summary) -> bool {
-     s
-        .status
+fn untracked_branch(s: &Summary) -> u16 {
+     s.status
         .branch
         .clone()
-        .map_or(false, |b| b.upstream.is_some())
+        .map_or(false, |b| b.upstream.is_some()) as u16
 }
 
-fn remote_changes(s: &Summary) -> bool {
-     s.status.branch.clone().map_or(false, |b| {
-        b.commits
-            .map_or(false, |TrackingCounts(_, behind)| behind == 0)
-    })
+fn remote_changes(s: &Summary) -> u16 {
+     s.status
+       .branch
+       .clone()
+       .map_or(1, |b| {
+         b.commits
+           .map_or(1, |TrackingCounts(_, behind)| behind)
+       }) as u16
 }
 
-fn unpushed_commit(s: &Summary) -> bool {
-     s.status.branch.clone().map_or(false, |b| {
-        b.commits
-            .map_or(false, |TrackingCounts(ahead, _)| ahead == 0)
-    })
+fn unpushed_commit(s: &Summary) -> u16 {
+     s.status
+       .branch
+       .clone()
+       .map_or(1, |b| {
+         b.commits
+           .map_or(1, |TrackingCounts(ahead, _)| ahead)
+       }) as u16
 }
 
-fn untagged_commit(s: &Summary) -> bool {
-     if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
+fn untagged_commit(s: &Summary) -> u16 {
+     (if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
         if let Oid::Commit(c) = oid {
             s.tag_on_commit(c).is_some()
         } else {
@@ -246,12 +264,12 @@ fn untagged_commit(s: &Summary) -> bool {
         }
     } else {
         false
-    }
+    }) as u16
 
 }
 
-fn unpushed_tag(s: &Summary) -> bool {
-     if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
+fn unpushed_tag(s: &Summary) -> u16 {
+     (if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
         if let Oid::Commit(c) = oid {
             if let Some(t) = s.tag_on_commit(c) {
                 s.ls_remote.iter().any(|rp| rp.refname == t)
@@ -263,8 +281,7 @@ fn unpushed_tag(s: &Summary) -> bool {
         }
     } else {
         false
-    }
-
+    }) as u16
 }
 /// Collects and reports reasons that your current workspace
 /// could not be reproduced on another workstation, in another place or time.
@@ -291,7 +308,7 @@ impl<'a> Summary<'a> {
         self.items()
             .iter()
             .fold(0, |status, item| {
-                if item.passed {
+                if item.passed() {
                     status
                 } else {
                     status | (1 << item.check.status_group)
@@ -318,10 +335,13 @@ impl<'a> Item<'a> {
     fn build(check: &'a Check, summary: &Summary) -> Self {
         Item{
             check,
-            passed: (check.eval)(summary),
+            enormity: (check.eval)(summary),
         }
     }
 
+    fn passed(&self) -> bool {
+      self.enormity > self.check.threshold
+    }
 }
 
 impl fmt::Display for Summary<'_> {
@@ -332,7 +352,7 @@ impl fmt::Display for Summary<'_> {
                 f,
                 "  {:>width$}: {}",
                 i.check.label,
-                i.passed,
+                i.passed(),
                 width = width.unwrap_or(0)
             )?;
         }
@@ -342,6 +362,6 @@ impl fmt::Display for Summary<'_> {
 
 impl fmt::Display for Item<'_> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.check.label, self.passed)
+        write!(f, "{}: {}", self.check.label, self.passed())
     }
 }
