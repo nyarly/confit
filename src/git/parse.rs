@@ -135,10 +135,7 @@ fn filepath(input: &str) -> IResult<&str, WorkPath> {
 }
 
 fn end_of_path(input: char) -> bool {
-    match input {
-        '\t' | '\n' => true,
-        _ => false,
-    }
+    matches!(input,  '\t' | '\n')
 }
 
 /*
