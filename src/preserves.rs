@@ -98,6 +98,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 1,
         required_data: STATUS,
         eval: untracked_files,
+        threshold: 0,
     },
     Check {
         label: "no unstaged changes",
@@ -106,6 +107,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 1,
         required_data: STATUS,
         eval: modified_files,
+        threshold: 0,
     },
     Check {
         label: "no uncommited changes",
@@ -114,6 +116,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 1,
         required_data: STATUS,
         eval: uncommited_changes,
+        threshold: 0,
     },
     Check {
         label: "commit tracked by local ref",
@@ -122,6 +125,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 1,
         required_data: STATUS,
         eval: detached_head,
+        threshold: 0,
     },
     Check {
         label: "branch tracks remote",
@@ -130,6 +134,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 2,
         required_data: STATUS,
         eval: untracked_branch,
+        threshold: 0,
     },
     Check {
         label: "all commits merged from remote",
@@ -138,6 +143,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 3,
         required_data: union(STATUS, REMOTE),
         eval: remote_changes,
+        threshold: 0,
     },
     Check {
         label: "all commits pushed to remote",
@@ -146,6 +152,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 2,
         required_data: STATUS,
         eval: unpushed_commit,
+        threshold: 0,
     },
     Check {
         label: "current commit is tagged",
@@ -154,6 +161,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 4,
         required_data: union(STATUS, REFS),
         eval: untagged_commit,
+        threshold: 0,
     },
     Check {
         label: "tag is pushed",
@@ -162,6 +170,7 @@ static ALL_CHECKS: [Check; 9] = [
         status_group: 4,
         required_data: union(STATUS, REMOTE),
         eval: unpushed_tag,
+        threshold: 0,
     },
 ];
 
@@ -169,10 +178,7 @@ fn untracked_files(s: &Summary) -> u16 {
     s.status
       .lines
       .iter()
-      .filter(|line| match line {
-        Untracked { .. } => false,
-        _ => true,
-      })
+      .filter(|line| matches!(line, Untracked{..}))
       .count() as u16
 }
 
@@ -180,7 +186,7 @@ fn modified_files(s: &Summary) -> u16 {
      s.status
        .lines
        .iter()
-       .filter(|line| match line {
+       .filter(|line| matches!(line,
          One {
            status: StatusPair { unstaged: m, .. },
            ..
@@ -192,9 +198,8 @@ fn modified_files(s: &Summary) -> u16 {
          | Unmerged {
            status: StatusPair { unstaged: m, .. },
            ..
-         } if *m != LineStatus::Unmodified => false,
-         _ => true,
-       })
+         } if *m != LineStatus::Unmodified
+       ))
      .count() as u16
 }
 
@@ -202,7 +207,7 @@ fn uncommited_changes(s: &Summary) -> u16 {
      s.status
        .lines
        .iter()
-       .filter(|line| match line {
+       .filter(|line| matches!( line,
          One {
            status: StatusPair { staged: m, .. },
            ..
@@ -214,9 +219,8 @@ fn uncommited_changes(s: &Summary) -> u16 {
          | Unmerged {
            status: StatusPair { staged: m, .. },
            ..
-         } if *m != LineStatus::Unmodified => false,
-         _ => true,
-       })
+         } if *m != LineStatus::Unmodified
+       ))
      .count() as u16
 
 }
@@ -256,32 +260,23 @@ fn unpushed_commit(s: &Summary) -> u16 {
 }
 
 fn untagged_commit(s: &Summary) -> u16 {
-     (if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
-        if let Oid::Commit(c) = oid {
-            s.tag_on_commit(c).is_some()
-        } else {
-            false
-        }
-    } else {
-        false
-    }) as u16
-
+  (if let Some(Oid::Commit(c)) = s.status.branch.clone().map(|b| b.oid) {
+    s.tag_on_commit(c).is_some()
+  } else {
+    false
+  }) as u16
 }
 
 fn unpushed_tag(s: &Summary) -> u16 {
-     (if let Some(oid) = s.status.branch.clone().map(|b| b.oid) {
-        if let Oid::Commit(c) = oid {
-            if let Some(t) = s.tag_on_commit(c) {
-                s.ls_remote.iter().any(|rp| rp.refname == t)
-            } else {
-                false
-            }
-        } else {
-            false
-        }
+  (if let Some(Oid::Commit(c)) = s.status.branch.clone().map(|b| b.oid) {
+    if let Some(t) = s.tag_on_commit(c) {
+      s.ls_remote.iter().any(|rp| rp.refname == t)
     } else {
-        false
-    }) as u16
+      false
+    }
+  } else {
+    false
+  }) as u16
 }
 /// Collects and reports reasons that your current workspace
 /// could not be reproduced on another workstation, in another place or time.
@@ -293,8 +288,8 @@ impl<'a> Summary<'a> {
         checks: Vec<&'a Check>,
     ) -> Self {
         Summary {
-            ls_remote,
             status,
+            ls_remote,
             for_each_ref,
             checks,
         }

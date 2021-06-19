@@ -218,75 +218,24 @@ pub fn status_lines(input: &str) -> IResult<&str, Vec<StatusLine>> {
     many0(terminated(status_line, tag("\n")))(input)
 }
 
-
-fn from_octal(input: &str) -> Result<u8, std::num::ParseIntError> {
-    u8::from_str_radix(input, 8)
-}
-
-fn octal(input: &str) -> IResult<&str, u8> {
-    map_res(take(1u8), from_octal)(input)
-}
-
-fn mode(input: &str) -> IResult<&str, Mode> {
-    map_res(count(octal, 6), Mode::try_from)(input)
-}
-
-fn line_status(input: &str) -> IResult<&str, LineStatus> {
-    use LineStatus::*;
-    take(1u8)(input).and_then(|parsed| match parsed {
-        (i, ".") => Ok((i, Unmodified)),
-        (i, "M") => Ok((i, Modified)),
-        (i, "A") => Ok((i, Added)),
-        (i, "D") => Ok((i, Deleted)),
-        (i, "R") => Ok((i, Renamed)),
-        (i, "C") => Ok((i, Copied)),
-        (i, "U") => Ok((i, Unmerged)),
-        (i, "?") => Ok((i, Untracked)),
-        (i, "!") => Ok((i, Ignored)),
-
-        (i, _) => Err(nom::Err::Error((i, nom::error::ErrorKind::OneOf))),
-    })
-}
-
-fn status_pair(input: &str) -> IResult<&str, StatusPair> {
-    map(tuple((line_status, line_status)), StatusPair::from)(input)
-}
-
-fn submodule_status_flag<I>(pattern: &'static str) -> impl Fn(I) -> IResult<I, bool>
-where
-    I: nom::InputIter<Item = char> + nom::Slice<std::ops::RangeFrom<usize>>,
-{
-    map(one_of(pattern), |c| c != '.')
-}
-
-fn submodule_status(input: &str) -> IResult<&str, SubmoduleStatus> {
-    let (i, s) = one_of("NS")(input)?;
-    match s {
-        'N' => map(count(one_of("."), 3), |_| SubmoduleStatus::Not)(i),
-        'S' => map(
-            tuple((
-                submodule_status_flag("C."),
-                submodule_status_flag("M."),
-                submodule_status_flag("U."),
-            )),
-            |(c, m, u)| SubmoduleStatus::Is(c, m, u),
-        )(i),
-        _ => panic!("one_of violated contract"),
-    }
-}
-
-fn tagged_score<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, u8> {
-    map_res(
-        preceded(tag(pattern), take_while(|c: char| c.is_digit(10))),
-        |n: &str| n.parse(),
-    )
-}
-
-fn change_score(input: &str) -> IResult<&str, ChangeScore> {
+fn status_line(input: &str) -> IResult<&str, StatusLine> {
     alt((
-        map(tagged_score("R"), ChangeScore::Rename),
-        map(tagged_score("C"), ChangeScore::Copy),
+        preceded(tag("? "), untracked_line),
+        preceded(tag("! "), ignored_line),
+        preceded(tag("1 "), one_file_line),
+        preceded(tag("2 "), two_file_line),
+        preceded(tag("u "), unmerged_file_line),
     ))(input)
+}
+
+fn untracked_line(input: &str) -> IResult<&str, StatusLine> {
+    let (i, path) = filepath(input)?;
+    Ok((i, StatusLine::Untracked { path }))
+}
+
+fn ignored_line(input: &str) -> IResult<&str, StatusLine> {
+    let (i, path) = filepath(input)?;
+    Ok((i, StatusLine::Ignored { path }))
 }
 
 fn one_file_line(input: &str) -> IResult<&str, StatusLine> {
@@ -369,23 +318,73 @@ fn unmerged_file_line(input: &str) -> IResult<&str, StatusLine> {
     ))
 }
 
-fn untracked_line(input: &str) -> IResult<&str, StatusLine> {
-    let (i, path) = terminated(filepath, tag("\t"))(input)?;
-    Ok((i, StatusLine::Untracked { path }))
+fn from_octal(input: &str) -> Result<u8, std::num::ParseIntError> {
+    u8::from_str_radix(input, 8)
 }
 
-fn ignored_line(input: &str) -> IResult<&str, StatusLine> {
-    let (i, path) = terminated(filepath, tag("\t"))(input)?;
-    Ok((i, StatusLine::Ignored { path }))
+fn octal(input: &str) -> IResult<&str, u8> {
+    map_res(take(1u8), from_octal)(input)
 }
 
-fn status_line(input: &str) -> IResult<&str, StatusLine> {
+fn mode(input: &str) -> IResult<&str, Mode> {
+    map_res(count(octal, 6), Mode::try_from)(input)
+}
+
+fn line_status(input: &str) -> IResult<&str, LineStatus> {
+    use LineStatus::*;
+    take(1u8)(input).and_then(|parsed| match parsed {
+        (i, ".") => Ok((i, Unmodified)),
+        (i, "M") => Ok((i, Modified)),
+        (i, "A") => Ok((i, Added)),
+        (i, "D") => Ok((i, Deleted)),
+        (i, "R") => Ok((i, Renamed)),
+        (i, "C") => Ok((i, Copied)),
+        (i, "U") => Ok((i, Unmerged)),
+        (i, "?") => Ok((i, Untracked)),
+        (i, "!") => Ok((i, Ignored)),
+
+        (i, _) => Err(nom::Err::Error((i, nom::error::ErrorKind::OneOf))),
+    })
+}
+
+fn status_pair(input: &str) -> IResult<&str, StatusPair> {
+    map(tuple((line_status, line_status)), StatusPair::from)(input)
+}
+
+fn submodule_status_flag<I>(pattern: &'static str) -> impl Fn(I) -> IResult<I, bool>
+where
+    I: nom::InputIter<Item = char> + nom::Slice<std::ops::RangeFrom<usize>>,
+{
+    map(one_of(pattern), |c| c != '.')
+}
+
+fn submodule_status(input: &str) -> IResult<&str, SubmoduleStatus> {
+    let (i, s) = one_of("NS")(input)?;
+    match s {
+        'N' => map(count(one_of("."), 3), |_| SubmoduleStatus::Not)(i),
+        'S' => map(
+            tuple((
+                submodule_status_flag("C."),
+                submodule_status_flag("M."),
+                submodule_status_flag("U."),
+            )),
+            |(c, m, u)| SubmoduleStatus::Is(c, m, u),
+        )(i),
+        _ => panic!("one_of violated contract"),
+    }
+}
+
+fn tagged_score<'a>(pattern: &'static str) -> impl Fn(&'a str) -> IResult<&'a str, u8> {
+    map_res(
+        preceded(tag(pattern), take_while(|c: char| c.is_digit(10))),
+        |n: &str| n.parse(),
+    )
+}
+
+fn change_score(input: &str) -> IResult<&str, ChangeScore> {
     alt((
-        preceded(tag("1 "), one_file_line),
-        preceded(tag("2 "), two_file_line),
-        preceded(tag("u "), unmerged_file_line),
-        preceded(tag("? "), untracked_line),
-        preceded(tag("! "), ignored_line),
+        map(tagged_score("R"), ChangeScore::Rename),
+        map(tagged_score("C"), ChangeScore::Copy),
     ))(input)
 }
 
@@ -418,6 +417,25 @@ mod tests {
                     index_obj: "befd8a0574f48b0f17a655c8ed4e5a6353b460ac".into(),
                     path: "spec/controllers/service_requests_controller_spec.rb".into()
                 }]
+            }
+        )
+    }
+
+    #[test]
+    fn full_parse_unknown_file() {
+        assert_eq!(
+            parse(include_str!("testdata/self-status-unknownfile")).unwrap(),
+            Status {
+                branch: Some(Branch {
+                    oid: Oid::Commit("d98f5dc243faaf545c3fcf08c3b02f44c58981d4".into()),
+                    head: Head::Branch("main".into()),
+                    upstream: Some("origin/main".into()),
+                    commits: Some(TrackingCounts(0, 0))
+                }),
+                lines: vec![
+                    StatusLine::Untracked { path: WorkPath::from("pinned.nix") },
+                    StatusLine::Untracked { path: WorkPath::from("src/git/parse/testdata/self-status-unknownfile") }
+                ]
             }
         )
     }

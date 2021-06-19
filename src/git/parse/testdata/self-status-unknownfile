@@ -1,0 +1,6 @@
+# branch.oid d98f5dc243faaf545c3fcf08c3b02f44c58981d4
+# branch.head main
+# branch.upstream origin/main
+# branch.ab +0 -0
+? pinned.nix
+? src/git/parse/testdata/self-status-unknownfile

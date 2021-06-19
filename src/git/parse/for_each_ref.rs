@@ -158,7 +158,7 @@ fn object_type(input: &str) -> IResult<&str, ObjectType> {
 fn tracking_state(input: &str) -> IResult<&str, Option<(u64, u64)>> {
     alt((
         map(tag("[gone]"), |_| None),
-        map(delimited(tag("["), ahead_behind, tag("]")), |p| Some(p)),
+        map(delimited(tag("["), ahead_behind, tag("]")), Some),
         map(tag(""), |_| Some((0, 0))),
     ))(input)
 }
@@ -295,6 +295,13 @@ mod tests {
     #[test]
     fn smoke() {
         parse(include_str!("testdata/mezzo-for-each-ref-formatted")).unwrap();
+    }
+
+    #[test]
+    fn first_line() {
+        line(
+            "'c3327de22fc2bee6f25988f727700a9932b520dc' '' 'commit' 'refs/heads/ad_objects' 'refs/remotes/origin/ad_objects' 'origin' '' 'Paula Burke <pburke@opentable.com> 1534292967 -0700'"
+        ).unwrap();
     }
 
     #[test]
