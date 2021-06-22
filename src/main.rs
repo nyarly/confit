@@ -3,8 +3,9 @@ mod preserves;
 
 use clap::{App, Arg};
 use preserves::{Check, Summary, CheckList, datasource::{STATUS, REFS, REMOTE}};
+use anyhow::Result;
 
-fn main() -> Result<(), git::Error> {
+fn main() -> Result<()> {
     let opt = App::new("Confit")
         .version("0.1")
         .author("Judson Lester <nyarly@gmail.com>")
@@ -70,7 +71,7 @@ fn main() -> Result<(), git::Error> {
     }
 
     if !opt.is_present("quiet") {
-        print!("{}", summary)
+        print!("{}", serde_json::to_string(&summary.items())?)
     }
 
     std::process::exit(summary.exit_status())
