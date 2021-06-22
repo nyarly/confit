@@ -1,24 +1,9 @@
 [package]
 name = "confit"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Judson <nyarly@gmail.com>"]
 edition = "2018"
-license-file = "LICENSE"
-[package.metadata]
-  [package.metadata.licensezero]
-    version = "2.0.0"
-
-    [[package.metadata.licensezero.ids]]
-      agentSignature = "d01c360c4cc419b1ff3ac6acc0eb959378b74a432c81c548d9a9e6c336cf951330549e1af7f1ea9799ccebfa977ca52e5bdc227cf6e2ecf7c23abfc580ba430e"
-      licensorSignature = "773cf83cd80667f501b4f7e11c8bf3583d1052c0d02e4e6c165bc7ae5da3ca2a22fe9c24eb411158fc947cd4fb2e5d1531e73b88a695a20423c183d965faea00"
-      [package.metadata.licensezero.ids.license]
-        homepage = "https://github.com/nyarly/confit"
-        jurisdiction = "US-CA"
-        name = "Judson Lester"
-        projectID = "a6df04f4-46e4-41d1-afe2-74a401be542a"
-        publicKey = "fd97b02517338094656147d5915070421b1af707d7f7d46e979b171e7de9ab93"
-        terms = "prosperity"
-        version = "3.0.0"
+license-file = "LICENSE.md"
 
 [dependencies]
 nom = '5'
