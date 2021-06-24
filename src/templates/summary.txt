@@ -1,0 +1,12 @@
+{% set maxwidth=0 -%}
+{%- for item in items -%}
+{%-   set labelwidth=item.check.label | length -%}
+{%-   if labelwidth > maxwidth -%}
+{%-     set_global maxwidth = labelwidth -%}
+{%-   endif -%}
+{%- endfor -%}
+{%  for item in items -%}
+{%-   set labelwidth=item.check.label | length -%}
+{%-   for i in range(end=(maxwidth-labelwidth)) %} {% endfor -%}
+{{item.check.label}}: {{item.passed}}{% if item.result.bad %}({{item.result.bad}}){%endif%}
+{%  endfor %}

@@ -1,0 +1,10 @@
+{% import "macros" as macros %}
+{%- set good = true -%}
+{%- for item in items -%}
+{%-   if item.passed != true -%}
+{%-     set_global good = false -%}
+{{ item.check.glyph }}{{ macros::onechar_badness(item=item) }}
+{%-   endif -%}
+{%- endfor -%}
+{%- if good -%}G
+{%- endif -%}

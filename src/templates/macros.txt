@@ -1,0 +1,9 @@
+{% macro onechar_badness(item) %}
+{%- if item.result.bad -%}
+  {%- if item.result.bad < 10 -%}
+    {{item.result.bad}}
+  {%- else -%}
+    !
+  {%- endif -%}
+{%- endif -%}
+{% endmacro %}

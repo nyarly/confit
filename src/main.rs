@@ -4,6 +4,19 @@ mod preserves;
 use clap::{App, Arg};
 use preserves::{Check, Summary, CheckList, datasource::{STATUS, REFS, REMOTE}};
 use anyhow::Result;
+use tera::{Tera, Context};
+use lazy_static::lazy_static;
+
+lazy_static! {
+  pub static ref TMPL: Tera = {
+    let mut tera = Tera::default();
+    tera.add_raw_template("macros", include_str!("templates/macros.txt")).expect("summary to parse");
+    tera.add_raw_template("summary", include_str!("templates/summary.txt")).expect("summary to parse");
+    tera.add_raw_template("statusline", include_str!("templates/statusline.txt")).expect("summary to parse");
+    tera.add_raw_template("debug", include_str!("templates/debug.txt")).expect("summary to parse");
+    tera
+  };
+}
 
 fn main() -> Result<()> {
     let opt = App::new("Confit")
@@ -12,14 +25,23 @@ fn main() -> Result<()> {
         .about("makes sure your work is properly preserved in git")
         .arg(
             Arg::with_name("debug")
-                .long("debug")
-                .help("outputs debug data")
+            .long("debug")
+            .help("outputs debug data")
         )
         .arg(
             Arg::with_name("quiet")
-                .long("quiet")
-                .short("q")
-                .help("suppress normal state summary; scripts can rely on the status code")
+            .long("quiet")
+            .short("q")
+            .help("suppress normal state summary; scripts can rely on the status code")
+            .conflicts_with("format")
+        )
+        .arg(
+            Arg::with_name("format")
+            .long("format")
+            .short("f")
+            .help("choose a format for output")
+            .possible_values(TMPL.get_template_names().collect::<Vec<_>>().as_slice())
+            .default_value("summary")
         )
         .arg(
             Arg::with_name("checks")
@@ -71,7 +93,10 @@ fn main() -> Result<()> {
     }
 
     if !opt.is_present("quiet") {
-        print!("{}", serde_json::to_string(&summary.items())?)
+        //print!("{}", serde_json::to_string(&summary.items())?);
+        let mut context = Context::default();
+        context.insert("items", &summary.items());
+        print!("{}", TMPL.render(opt.value_of("format").expect("format has no value"), &context)?)
     }
 
     std::process::exit(summary.exit_status())

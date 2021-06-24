@@ -1,0 +1,3 @@
+{%  for item in items -%}
+{{item.check.tag}}: {%if item.result.bad%}{{item.result.bad}}{%endif%} <= {{ item.check.threshold }} -> {{ item.passed }}
+{%  endfor %}
