@@ -93,9 +93,11 @@ fn main() -> Result<()> {
     }
 
     if !opt.is_present("quiet") {
-        //print!("{}", serde_json::to_string(&summary.items())?);
+        //println!("status: {}", serde_json::to_string(&summary.status)?);
+        //println!("items: {}", serde_json::to_string(&summary.items())?);
         let mut context = Context::default();
         context.insert("items", &summary.items());
+        context.insert("status", &summary.status);
         print!("{}", TMPL.render(opt.value_of("format").expect("format has no value"), &context)?)
     }
 

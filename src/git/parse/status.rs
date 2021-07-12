@@ -8,12 +8,13 @@ use nom::{
     sequence::{delimited, preceded, separated_pair, terminated, tuple},
     IResult,
 };
+use serde::Serialize;
 use std::array::TryFromSliceError;
 use std::convert::TryFrom;
 
 use super::{filepath, settle_parse_result, sha, ObjectName, RefName, TrackingCounts, WorkPath};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Status {
     pub branch: Option<Branch>,
     pub lines: Vec<StatusLine>,
@@ -28,7 +29,7 @@ impl Default for Status {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Branch {
     pub oid: Oid,
     pub head: Head,
@@ -36,7 +37,7 @@ pub struct Branch {
     pub commits: Option<TrackingCounts>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum StatusLine {
     One {
         status: StatusPair,
@@ -80,40 +81,40 @@ pub enum StatusLine {
     },
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum Oid {
     Initial,
     Commit(ObjectName),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum Head {
     Detached,
     Branch(RefName),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Mode([u8; 6]);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum SubmoduleStatus {
     Not,
     Is(bool, bool, bool),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum ChangeScore {
     Rename(u8),
     Copy(u8),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct StatusPair {
     pub staged: LineStatus,
     pub unstaged: LineStatus,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum LineStatus {
     Unmodified,
     Modified,

@@ -11,6 +11,7 @@ use std::{
     ffi::OsString,
     fmt::{self, Debug, Display},
 };
+use serde::Serialize;
 
 pub mod for_each_ref;
 pub mod ls_remote;
@@ -20,7 +21,7 @@ pub use for_each_ref::parse as for_each_ref;
 pub use ls_remote::parse as ls_remote;
 pub use status::parse as status;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct ObjectName(String);
 
 impl From<&str> for ObjectName {
@@ -29,7 +30,7 @@ impl From<&str> for ObjectName {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct RefName(String);
 
 impl From<&str> for RefName {
@@ -44,7 +45,7 @@ impl AsRef<str> for RefName {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct WorkPath(OsString);
 
 impl From<&str> for WorkPath {
@@ -53,7 +54,7 @@ impl From<&str> for WorkPath {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Serialize)]
 pub struct TrackingCounts(pub u64, pub u64);
 
 

@@ -1,4 +1,5 @@
 {% import "macros" as macros %}
+{{ status.branch.head.Branch }}|
 {%- set good = true -%}
 {%- for item in items -%}
 {%-   if item.passed != true -%}
@@ -6,5 +7,5 @@
 {{ item.check.glyph }}{{ macros::onechar_badness(item=item) }}
 {%-   endif -%}
 {%- endfor -%}
-{%- if good -%}G
+{%- if good -%}✔
 {%- endif -%}
