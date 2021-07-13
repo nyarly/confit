@@ -222,7 +222,7 @@ impl fmt::Display for Item<'_> {
 static ALL_CHECKS: [Check; 9] = [
   Check {
     label: "all commits pushed to remote",
-    tags: &["push", "local"],
+    tags: &["push", "local", "git_prompt"],
     glyph: '↑',
     status_group: 2,
     required_data: STATUS,
@@ -240,7 +240,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "no uncommited changes",
-    tags: &["commit", "local"],
+    tags: &["commit", "local", "git_prompt"],
     glyph: '.',
     status_group: 1,
     required_data: STATUS,
@@ -249,7 +249,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "no unstaged changes",
-    tags: &["stage", "local"],
+    tags: &["stage", "local", "git_prompt"],
     glyph: '+',
     status_group: 1,
     required_data: STATUS,
@@ -258,7 +258,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check{
     label: "all files tracked",
-    tags: &["track_files", "local"],
+    tags: &["track_files", "local", "git_prompt"],
     glyph: '?',
     status_group: 1,
     required_data: STATUS,
@@ -267,7 +267,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "commit tracked by local ref",
-    tags: &["detached", "local"],
+    tags: &["detached", "local", "git_prompt"],
     glyph: '⌱',
     status_group: 1,
     required_data: STATUS,
@@ -276,7 +276,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "branch tracks remote",
-    tags: &["track_remote", "local"],
+    tags: &["track_remote", "local", "git_prompt"],
     glyph: '⍏',
     status_group: 2,
     required_data: STATUS,
