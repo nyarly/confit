@@ -57,7 +57,7 @@ pub struct Summary<'a> {
 #[derive(Serialize)]
 pub struct Check {
   label: &'static str,
-  tag: &'static str,
+  tags: &'static [&'static str],
   glyph: char,
   status_group: u8,
   required_data: datasource::Group,
@@ -109,11 +109,15 @@ impl Check {
   }
 
   pub fn tagged_checks<'a, 'b>(tags: impl Clone + IntoIterator<Item=&'b str>) -> Vec<&'a Check> {
-    ALL_CHECKS.iter().filter(move |ch| tags.clone().into_iter().any(|t|  t == ch.tag) ).collect()
+    ALL_CHECKS.iter().filter(move |ch| tags.clone().into_iter()
+        .any(|t|  ch.tags.iter().any(|c| (t == *c) ))).collect()
   }
 
   pub fn all_tags() -> Vec<&'static str> {
-    ALL_CHECKS.iter().map(|ch| ch.tag).collect()
+    let mut tags = ALL_CHECKS.iter().flat_map(|ch| ch.tags.iter().copied()).collect::<Vec<_>>();
+    tags.sort_unstable();
+    tags.dedup();
+    tags
   }
 }
 
@@ -218,7 +222,7 @@ impl fmt::Display for Item<'_> {
 static ALL_CHECKS: [Check; 9] = [
   Check {
     label: "all commits pushed to remote",
-    tag: "push",
+    tags: &["push", "local"],
     glyph: '↑',
     status_group: 2,
     required_data: STATUS,
@@ -227,7 +231,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "all commits merged from remote",
-    tag: "merge",
+    tags: &["merge"],
     glyph: '↓',
     status_group: 3,
     required_data: union(STATUS, REMOTE),
@@ -236,7 +240,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "no uncommited changes",
-    tag: "commit",
+    tags: &["commit", "local"],
     glyph: '.',
     status_group: 1,
     required_data: STATUS,
@@ -245,7 +249,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "no unstaged changes",
-    tag: "stage",
+    tags: &["stage", "local"],
     glyph: '+',
     status_group: 1,
     required_data: STATUS,
@@ -254,7 +258,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check{
     label: "all files tracked",
-    tag: "track_files",
+    tags: &["track_files", "local"],
     glyph: '?',
     status_group: 1,
     required_data: STATUS,
@@ -263,7 +267,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "commit tracked by local ref",
-    tag: "detached",
+    tags: &["detached", "local"],
     glyph: '⌱',
     status_group: 1,
     required_data: STATUS,
@@ -272,7 +276,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "branch tracks remote",
-    tag: "track_remote",
+    tags: &["track_remote", "local"],
     glyph: '⍏',
     status_group: 2,
     required_data: STATUS,
@@ -281,7 +285,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "current commit is tagged",
-    tag: "tag",
+    tags: &["tag", "local"],
     glyph: '🏷',
     status_group: 4,
     required_data: union(STATUS, REFS),
@@ -290,7 +294,7 @@ static ALL_CHECKS: [Check; 9] = [
   },
   Check {
     label: "tag is pushed",
-    tag: "push_tag",
+    tags: &["push_tag"],
     glyph: '🏳',
     status_group: 4,
     required_data: union(STATUS, REMOTE),
