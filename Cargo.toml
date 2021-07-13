@@ -4,6 +4,11 @@ version = "1.0.0"
 authors = ["Judson <nyarly@gmail.com>"]
 edition = "2018"
 license-file = "LICENSE.md"
+description = "Making sure your work is properly preserved"
+homepage = "https://indiecc.com/~nyarly/confit"
+repository = "https://github.com/nyarly/confit"
+keywords = ["cli", "vcs", "git", "ci", "tools" ]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 nom = '5'
