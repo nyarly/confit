@@ -20,7 +20,7 @@ lazy_static! {
 
 fn main() -> Result<()> {
     let opt = App::new("Confit")
-        .version("0.1")
+        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("dev"))
         .author("Judson Lester <nyarly@gmail.com>")
         .about("makes sure your work is properly preserved in git")
         .arg(
