@@ -38,6 +38,7 @@ pub struct Branch {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum StatusLine {
     One {
         status: StatusPair,
@@ -82,12 +83,14 @@ pub enum StatusLine {
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Oid {
     Initial,
     Commit(ObjectName),
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Head {
     Detached,
     Branch(RefName),
@@ -97,12 +100,14 @@ pub enum Head {
 pub struct Mode([u8; 6]);
 
 #[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SubmoduleStatus {
     Not,
     Is(bool, bool, bool),
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ChangeScore {
     Rename(u8),
     Copy(u8),
@@ -115,6 +120,7 @@ pub struct StatusPair {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum LineStatus {
     Unmodified,
     Modified,

@@ -1,5 +1,5 @@
 {% import "macros" as macros %}
-{{ status.branch.head.Branch }}|
+{{ status.branch.head.branch }}|
 {%- set good = true -%}
 {%- for item in items -%}
 {%-   if item.passed != true -%}
