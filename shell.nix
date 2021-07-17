@@ -5,7 +5,7 @@ in
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    rustChannels.stable.rust
+    cargo
     yj
     jq
   ];
