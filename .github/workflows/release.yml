@@ -111,18 +111,10 @@ jobs:
       run: |
         pwd
         ls -l
-        echo $(cat <<RUN)
-        cargo install cross
+        nix-shell --run "cargo install cross"
         echo "CARGO=cross" >> $GITHUB_ENV
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
         echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
-        RUN
-        nix-shell --run $(cat <<RUN)
-        cargo install cross
-        echo "CARGO=cross" >> $GITHUB_ENV
-        echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-        echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
-        RUN
 
     - name: Show command used for Cargo
       run: |
@@ -132,46 +124,19 @@ jobs:
 
     - name: Build release binary
       run: |
-        nix-shell --run -- <<<RUN
-        ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
-        RUN
-
-    - name: Strip release binary (linux and macos)
-      if: matrix.build == 'linux' || matrix.build == 'macos'
-      run: strip "target/${{ matrix.target }}/release/rg"
-
-    - name: Strip release binary (arm)
-      if: matrix.build == 'linux-arm'
-      run: |
-        docker run --rm -v \
-          "$PWD/target:/target:Z" \
-          rustembedded/cross:arm-unknown-linux-gnueabihf \
-          arm-linux-gnueabihf-strip \
-          /target/arm-unknown-linux-gnueabihf/release/rg
+        nix-shell --run "${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}"
 
     - name: Build archive
       shell: bash
       run: |
-        outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
-        staging="ripgrep-${{ needs.create-release.outputs.version }}-${{ matrix.target }}"
-        mkdir -p "$staging"/{complete,doc}
+        staging="confit-${{ needs.create-release.outputs.version }}-${{ matrix.target }}"
+        mkdir -p "$staging"
 
-        cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$staging/"
-        cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$staging/doc/"
-        cp "$outdir"/{rg.bash,rg.fish,_rg.ps1} "$staging/complete/"
-        cp complete/_rg "$staging/complete/"
+        cp {README.md,LICENSE.md} "$staging/"
 
-        if [ "${{ matrix.os }}" = "windows-2019" ]; then
-          cp "target/${{ matrix.target }}/release/rg.exe" "$staging/"
-          7z a "$staging.zip" "$staging"
-          echo "ASSET=$staging.zip" >> $GITHUB_ENV
-        else
-          # The man page is only generated on Unix systems. ¯\_(ツ)_/¯
-          cp "$outdir"/rg.1 "$staging/doc/"
-          cp "target/${{ matrix.target }}/release/rg" "$staging/"
-          tar czf "$staging.tar.gz" "$staging"
-          echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
-        fi
+        cp "target/${{ matrix.target }}/release/confit" "$staging/"
+        tar czf "$staging.tar.gz" "$staging"
+        echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
 
     - name: Upload release archive
       uses: actions/upload-release-asset@v1.0.1
