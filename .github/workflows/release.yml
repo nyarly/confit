@@ -124,6 +124,8 @@ jobs:
 
     - name: Build release binary
       run: |
+        pwd
+        ls -l
         nix-shell --run -- <<<RUN
         ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
         RUN
