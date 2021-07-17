@@ -96,15 +96,15 @@ jobs:
       with:
         fetch-depth: 1
 
+    - uses: cachix/install-nix-action@v13
+      with:
+        nix_path: nixpkgs=channel:nixos-21.05
+
     - uses: cachix/cachix-action@v10
       with:
         name: mycache
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
         extraPullNames: nix-community
-
-    - uses: cachix/install-nix-action@v13
-      with:
-        nix_path: nixpkgs=channel:nixos-21.05
 
     - name: Use Cross
       shell: bash
