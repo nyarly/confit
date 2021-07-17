@@ -109,7 +109,9 @@ jobs:
     - name: Use Cross
       shell: bash
       run: |
-        nix-shell --run -- <<<RUN
+        pwd
+        ls -l
+        nix-shell --run <<<RUN
         cargo install cross
         echo "CARGO=cross" >> $GITHUB_ENV
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
@@ -124,8 +126,6 @@ jobs:
 
     - name: Build release binary
       run: |
-        pwd
-        ls -l
         nix-shell --run -- <<<RUN
         ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
         RUN
