@@ -48,7 +48,7 @@ jobs:
   build-release:
     name: build-release
     needs: ['create-release']
-    if: env.RELEASE_VERSION != ''
+    if: ${{env.RELEASE_VERSION != '' }}
     runs-on: ${{ matrix.os }}
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
