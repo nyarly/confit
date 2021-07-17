@@ -6,6 +6,10 @@ on:
     tags:
     - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release version
+        default: ""
 jobs:
   create-release:
     name: create-release
@@ -17,12 +21,20 @@ jobs:
       upload_url: ${{ steps.release.outputs.upload_url }}
       version: ${{ env.RELEASE_VERSION }}
     steps:
+      - name: Get release from event input
+        shell: bash
+        if: github.event.inputs.version != ''
+        run: |
+          echo "RELEASE_VERSION=${{github.event.inputs.version}}" >> $GITHUB_ENV
       - name: Get the release version from the tag
         shell: bash
         if: env.RELEASE_VERSION == '' && env.GITHUB_REF != 'ref/heads/main'
         run: |
           # cf: https://github.community/t5/GitHub-Actions/How-to-get-just-the-tag-name/m-p/32167/highlight/true#M1027
           echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Report release name
+        shell: bash
+        run: |
           echo "version is: ${{ env.RELEASE_VERSION }}"
       - name: Create GitHub release
         id: release
