@@ -111,13 +111,13 @@ jobs:
       run: |
         pwd
         ls -l
-        echo <<<RUN
+        echo $(cat <<RUN)
         cargo install cross
         echo "CARGO=cross" >> $GITHUB_ENV
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
         echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
         RUN
-        nix-shell --run <<<RUN
+        nix-shell --run $(cat <<RUN)
         cargo install cross
         echo "CARGO=cross" >> $GITHUB_ENV
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
