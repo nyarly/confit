@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Get the release version from the tag
         shell: bash
-        if: env.RELEASE_VERSION == ''
+        if: env.RELEASE_VERSION == '' && env.GITHUB_REF != 'ref/heads/main'
         run: |
           # cf: https://github.community/t5/GitHub-Actions/How-to-get-just-the-tag-name/m-p/32167/highlight/true#M1027
           echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
@@ -36,6 +36,7 @@ jobs:
   build-release:
     name: build-release
     needs: ['create-release']
+    if: env.RELEASE_VERSION != ''
     runs-on: ${{ matrix.os }}
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
