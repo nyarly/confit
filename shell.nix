@@ -6,6 +6,8 @@ in
 pkgs.mkShell {
   buildInputs = with pkgs; [
     cargo
+    cargo-cross
+    rustup
     yj
     jq
   ];

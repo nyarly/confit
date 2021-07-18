@@ -112,6 +112,7 @@ jobs:
         pwd
         ls -l
         nix-shell --run "cargo install cross"
+        nix-shell --run "rustup target add ${{matrix.target}}"
         echo "CARGO=cross" >> $GITHUB_ENV
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
         echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
@@ -134,7 +135,6 @@ jobs:
 
         cp {README.md,LICENSE.md} "$staging/"
 
-        ls -R target
         cp "target/${{ matrix.target }}/release/confit${{ matrix.ext }}" "$staging/"
         tar czf "$staging.tar.gz" "$staging"
         echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
