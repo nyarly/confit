@@ -64,26 +64,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [linux, linux-arm, macos, win-gnu]
         include:
         - build: linux
           rust: nightly
           target: x86_64-unknown-linux-musl
+          ext:
         - build: linux-arm
           rust: nightly
           target: arm-unknown-linux-gnueabihf
+          ext:
         - build: macos
           rust: nightly
           target: x86_64-apple-darwin
+          ext:
         - build: win-msvc
           rust: nightly
           target: x86_64-pc-windows-msvc
+          ext: .ext
         - build: win-gnu
           rust: nightly-x86_64-gnu
           target: x86_64-pc-windows-gnu
+          ext: .ext
         - build: win32-msvc
           rust: nightly
           target: i686-pc-windows-msvc
+          ext: .ext
 
     steps:
     - name: Checkout repository
@@ -130,7 +135,7 @@ jobs:
         cp {README.md,LICENSE.md} "$staging/"
 
         ls -R target
-        cp "target/${{ matrix.target }}/release/confit" "$staging/"
+        cp "target/${{ matrix.target }}/release/confit${{ matrix.ext }}" "$staging/"
         tar czf "$staging.tar.gz" "$staging"
         echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
 
