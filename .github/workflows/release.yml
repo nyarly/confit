@@ -129,6 +129,7 @@ jobs:
 
         cp {README.md,LICENSE.md} "$staging/"
 
+        ls -R target
         cp "target/${{ matrix.target }}/release/confit" "$staging/"
         tar czf "$staging.tar.gz" "$staging"
         echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
