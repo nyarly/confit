@@ -48,7 +48,7 @@ jobs:
   build-release:
     name: build-release
     needs: ['create-release']
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-18.04
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
       # systems.
@@ -64,20 +64,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [linux, linux-arm, macos]
+        build: [linux, linux-arm, macos, win-gnu]
         include:
         - build: linux
-          os: ubuntu-18.04
           rust: nightly
           target: x86_64-unknown-linux-musl
         - build: linux-arm
-          os: ubuntu-18.04
           rust: nightly
           target: arm-unknown-linux-gnueabihf
         - build: macos
-          os: macos-latest
           rust: nightly
           target: x86_64-apple-darwin
+        - build: win-msvc
+          rust: nightly
+          target: x86_64-pc-windows-msvc
+        - build: win-gnu
+          rust: nightly-x86_64-gnu
+          target: x86_64-pc-windows-gnu
+        - build: win32-msvc
+          rust: nightly
+          target: i686-pc-windows-msvc
 
     steps:
     - name: Checkout repository
