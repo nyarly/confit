@@ -48,7 +48,7 @@ jobs:
   build-release:
     name: build-release
     needs: ['create-release']
-    runs-on: ubuntu-18.04
+    runs-on: ${{matrix.host}}
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
       # systems.
@@ -67,26 +67,32 @@ jobs:
         include:
         - build: linux
           rust: nightly
+          host: ubuntu-18.04
           target: x86_64-unknown-linux-musl
           ext:
         - build: linux-arm
           rust: nightly
+          host: ubuntu-18.04
           target: arm-unknown-linux-gnueabihf
           ext:
         - build: macos
           rust: nightly
+          host: macos-latest
           target: x86_64-apple-darwin
           ext:
         - build: win-msvc
           rust: nightly
+          host: ubuntu-18.04
           target: x86_64-pc-windows-msvc
           ext: .exe
         - build: win-gnu
           rust: nightly-x86_64-gnu
+          host: ubuntu-18.04
           target: x86_64-pc-windows-gnu
           ext: .exe
         - build: win32-msvc
           rust: nightly
+          host: ubuntu-18.04
           target: i686-pc-windows-msvc
           ext: .exe
 
