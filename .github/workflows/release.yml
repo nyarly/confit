@@ -64,6 +64,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        exclude:
+        - build: win-msvc
+        - build: win32-msvc
         include:
         - build: linux
           rust: nightly
