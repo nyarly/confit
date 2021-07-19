@@ -80,15 +80,15 @@ jobs:
         - build: win-msvc
           rust: nightly
           target: x86_64-pc-windows-msvc
-          ext: .ext
+          ext: .exe
         - build: win-gnu
           rust: nightly-x86_64-gnu
           target: x86_64-pc-windows-gnu
-          ext: .ext
+          ext: .exe
         - build: win32-msvc
           rust: nightly
           target: i686-pc-windows-msvc
-          ext: .ext
+          ext: .exe
 
     steps:
     - name: Checkout repository
