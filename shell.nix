@@ -7,8 +7,8 @@ pkgs.mkShell {
 
   buildInputs = with pkgs; [
     cargo
-    cargo-cross
-    rustup
+    #cargo-cross
+    #rustup
     yj
     jq
   ] ++ lib.optionals stdenv.isDarwin [

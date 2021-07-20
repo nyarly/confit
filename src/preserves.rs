@@ -110,7 +110,7 @@ impl Check {
 
   pub fn tagged_checks<'a, 'b>(tags: impl Clone + IntoIterator<Item=&'b str>) -> Vec<&'a Check> {
     ALL_CHECKS.iter().filter(move |ch| tags.clone().into_iter()
-        .any(|t|  ch.tags.iter().any(|c| (t == *c) ))).collect()
+        .any(|t|  ch.tags.iter().any(|&c| (t == c) ))).collect()
   }
 
   pub fn all_tags() -> Vec<&'static str> {

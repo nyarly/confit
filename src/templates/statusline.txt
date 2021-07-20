@@ -1,5 +1,7 @@
 {% import "macros" as macros %}
+{% if status.branch.head.branch is defined -%}
 {{ status.branch.head.branch }}|
+{%- endif -%}
 {%- set good = true -%}
 {%- for item in items -%}
 {%-   if item.passed != true -%}

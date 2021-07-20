@@ -40,7 +40,9 @@ fn main() -> Result<()> {
             .long("format")
             .short("f")
             .help("choose a format for output")
-            .possible_values(TMPL.get_template_names().collect::<Vec<_>>().as_slice())
+            .possible_values(TMPL.get_template_names()
+                .filter(|&n| n != "macros")
+                .collect::<Vec<_>>().as_slice())
             .default_value("summary")
         )
         .arg(
