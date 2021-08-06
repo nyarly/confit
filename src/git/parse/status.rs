@@ -307,7 +307,7 @@ fn unmerged_file_line(input: &str) -> IResult<&str, StatusLine> {
     let (i, stage1_obj) = terminated(sha, tag(" "))(i)?;
     let (i, stage2_obj) = terminated(sha, tag(" "))(i)?;
     let (i, stage3_obj) = terminated(sha, tag(" "))(i)?;
-    let (i, path) = terminated(filepath, tag("\t"))(i)?;
+    let (i, path) = filepath(i)?;
     Ok((
         i,
         StatusLine::Unmerged {
@@ -448,6 +448,132 @@ mod tests {
     }
 
     #[test]
+    fn full_parse_triple_u() {
+        assert_eq!(
+            parse(include_str!("testdata/status-triple-u")).unwrap(),
+            Status {
+                branch: Some(Branch{
+                    oid: Oid::Commit(ObjectName("f6cfc1432035767a5dce1dc0d4126765ffd18289".into())),
+                    head: Head::Branch(RefName("update-dev-go".into())),
+                    upstream: Some(RefName("origin/update-dev-go".into())),
+                    commits: Some(TrackingCounts(0, 0))
+                }),
+                lines: vec![
+                    StatusLine::One {
+                    status: StatusPair {
+                        staged: LineStatus::Modified,
+                        unstaged: LineStatus::Unmodified
+                    },
+                    sub: SubmoduleStatus::Not,
+                    head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    head_obj: ObjectName("c7f5a96ec3bf2b802ab371b73ded691f6c656331".into()),
+                    index_obj: ObjectName("b720f5091ae62a02ae67bfdf2582efdc35448552".into()),
+                    path: WorkPath::from("../.github/workflows/check.yml")
+                },
+                    StatusLine::One {
+                    status: StatusPair {
+                        staged: LineStatus::Modified,
+                        unstaged: LineStatus::Unmodified
+                    },
+                    sub: SubmoduleStatus::Not,
+                    head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    head_obj: ObjectName("0149f74d8da209a2a13f224b553beb8114497813".into()),
+                    index_obj: ObjectName("82f1c7384571727298029018ff1bc05eacdc7ea1".into()),
+                    path: WorkPath::from("../Dockerfile")
+                }, StatusLine::One {
+                    status: StatusPair {
+                        staged: LineStatus::Modified,
+                        unstaged: LineStatus::Unmodified
+                    },
+                    sub: SubmoduleStatus::Not,
+                    head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    head_obj: ObjectName("0a4e4839a44b33e95d30a9cf82faba06c91caac2".into()),
+                    index_obj: ObjectName("f59d9f514781276d2c8587a9c5cdc6f8bb275fa9".into()),
+                    path: WorkPath::from("go.mod")
+                }, StatusLine::One {
+                    status: StatusPair {
+                        staged: LineStatus::Modified,
+                        unstaged: LineStatus::Unmodified
+                    },
+                    sub: SubmoduleStatus::Not,
+                    head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    head_obj: ObjectName("88cfefab6ba36c284b8887509086d59363650dc3".into()),
+                    index_obj: ObjectName("ec6fa2cdcfe4f26223278bae2fbf30a964ff3639".into()),
+                    path: WorkPath::from("go.sum")
+                }, StatusLine::One {
+                    status: StatusPair {
+                        staged: LineStatus::Modified,
+                        unstaged: LineStatus::Unmodified
+                    },
+                    sub: SubmoduleStatus::Not,
+                    head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    head_obj: ObjectName("626bc9ec316e9430ffd9dbcc7bf3fc8a07013985".into()),
+                    index_obj: ObjectName("9dbed91e2450883b4af9935e77203754063309aa".into()),
+                    path: WorkPath::from("main.go")
+                }, StatusLine::One {
+                    status: StatusPair {
+                        staged: LineStatus::Modified,
+                        unstaged: LineStatus::Unmodified
+                    },
+                    sub: SubmoduleStatus::Not,
+                    head_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    index_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    head_obj: ObjectName("f9d75547a0ed74e0a56acb289097beb288fde0cf".into()),
+                    index_obj: ObjectName("fb42865b0fabc08890146000b2a0c04a701f065e".into()),
+                    path: WorkPath::from("main_test.go")
+                }, StatusLine::Unmerged {
+                    status: StatusPair {
+                        staged: LineStatus::Unmerged,
+                        unstaged: LineStatus::Unmerged
+                    },
+                    sub: SubmoduleStatus::Not,
+                    stage1_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    stage2_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    stage3_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                    stage1_obj: ObjectName("39446abbfef87c33313544fdcc1d157d39f678bf".into()),
+                    stage2_obj: ObjectName("9065d4117f14b0b6b0a9517e2389985a9220b399".into()),
+                    stage3_obj: ObjectName("534c7a4034183d0972d0f674cbb0bf2dea601e2a".into()),
+                    path: WorkPath::from("../unstable.nix")
+                }]
+            }
+        )
+    }
+
+    #[test]
+    fn parse_unknown_line() {
+        assert_eq!(
+            status_line("u UU N... 100644 100644 100644 100644 39446abbfef87c33313544fdcc1d157d39f678bf 9065d4117f14b0b6b0a9517e2389985a9220b399 534c7a4034183d0972d0f674cbb0bf2dea601e2a ../unstable.nix").unwrap(),
+            ("", StatusLine::Unmerged {
+                status: StatusPair{
+                    staged: LineStatus::Unmerged,
+                    unstaged: LineStatus::Unmerged
+                },
+                sub: SubmoduleStatus::Not,
+                stage1_mode: Mode([1, 0, 0, 6, 4, 4]),
+                stage2_mode: Mode([1, 0, 0, 6, 4, 4]),
+                stage3_mode: Mode([1, 0, 0, 6, 4, 4]),
+                worktree_mode: Mode([1, 0, 0, 6, 4, 4]),
+                stage1_obj: ObjectName("39446abbfef87c33313544fdcc1d157d39f678bf".into()),
+                stage2_obj: ObjectName("9065d4117f14b0b6b0a9517e2389985a9220b399".into()),
+                stage3_obj: ObjectName("534c7a4034183d0972d0f674cbb0bf2dea601e2a".into()),
+                path: WorkPath::from("../unstable.nix")
+            })
+        )
+    }
+
+    #[test]
     fn branch_parse() {
         assert_eq!(
             branch(
@@ -457,13 +583,13 @@ mod tests {
            # branch.ab +0 -0\n"
             ),
             Ok((
-                "",
-                Branch {
-                    oid: Oid::Commit("0a03ba3cfde6472cb7431958dd78ca2c0d65de74".into()),
-                    head: Head::Branch("bulk_update_api".into()),
-                    upstream: Some("origin/bulk_update_api".into()),
-                    commits: Some(TrackingCounts(0, 0)),
-                }
+                    "",
+                    Branch {
+                        oid: Oid::Commit("0a03ba3cfde6472cb7431958dd78ca2c0d65de74".into()),
+                        head: Head::Branch("bulk_update_api".into()),
+                        upstream: Some("origin/bulk_update_api".into()),
+                        commits: Some(TrackingCounts(0, 0)),
+                    }
             ))
         )
     }
@@ -497,31 +623,41 @@ mod tests {
         assert_eq!(
             status_pair(".."),
             Ok((
-                "",
-                StatusPair {
-                    staged: LineStatus::Unmodified,
-                    unstaged: LineStatus::Unmodified
-                }
+                    "",
+                    StatusPair {
+                        staged: LineStatus::Unmodified,
+                        unstaged: LineStatus::Unmodified
+                    }
             ))
         );
         assert_eq!(
             status_pair("R."),
             Ok((
-                "",
-                StatusPair {
-                    staged: LineStatus::Renamed,
-                    unstaged: LineStatus::Unmodified
-                }
+                    "",
+                    StatusPair {
+                        staged: LineStatus::Renamed,
+                        unstaged: LineStatus::Unmodified
+                    }
             ))
         );
         assert_eq!(
             status_pair(".M"),
             Ok((
-                "",
-                StatusPair {
-                    staged: LineStatus::Unmodified,
-                    unstaged: LineStatus::Modified
-                }
+                    "",
+                    StatusPair {
+                        staged: LineStatus::Unmodified,
+                        unstaged: LineStatus::Modified
+                    }
+            ))
+        );
+        assert_eq!(
+            status_pair("UU"),
+            Ok((
+                    "",
+                    StatusPair {
+                        staged: LineStatus::Unmerged,
+                        unstaged: LineStatus::Unmerged
+                    }
             ))
         )
     }
