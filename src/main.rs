@@ -1,7 +1,7 @@
 mod git;
 mod preserves;
 
-use clap::{App, Arg};
+use clap::{App, Arg, crate_authors, crate_version};
 use preserves::{Check, Summary, CheckList, datasource::{STATUS, REFS, REMOTE}};
 use tera::{Tera, Context};
 use lazy_static::lazy_static;
@@ -19,9 +19,12 @@ lazy_static! {
 
 fn main() -> ! {
   let opt = App::new("Confit")
-    .version(option_env!("CARGO_PKG_VERSION").unwrap_or("dev"))
-    .author("Judson Lester <nyarly@gmail.com>")
+    //.version(option_env!("CARGO_PKG_VERSION").unwrap_or("dev"))
+    .version(crate_version!())
+    .author(crate_authors!(", "))
     .about("makes sure your work is properly preserved in git")
+    .long_about(include_str!("about.txt"))
+    .after_help(include_str!("after.txt"))
     .arg(
       Arg::with_name("debug")
       .long("debug")
@@ -46,7 +49,8 @@ fn main() -> ! {
     )
     .arg(
       Arg::with_name("checks")
-      .short("checks")
+      .long("checks")
+      .short("c")
       .use_delimiter(true)
       .takes_value(true)
       .multiple(true)

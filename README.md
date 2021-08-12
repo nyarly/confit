@@ -24,11 +24,21 @@ The error code is computed by bitwise OR
 of various "families" of commit checking.
 
 A quick summary of other features
-is in the commandline help text:
+is in the command-line help text:
 ```
-Confit 1.0
-Judson Lester <nyarly@gmail.com>
-makes sure your work is properly preserved in git
+Confit 1.1.1
+Judson <nyarly@gmail.com>
+
+Generates reports about the state of version control for the current workspace.
+Git status is collected, and then a series of checks are run on it to establish
+that the contents of the workspace are stored, synchronized and recoverable.
+The results of these checks are then formatted into a report via a selectable
+template.
+
+These reports help confirm that you've properly committed, pushed and tagged
+your work. This can help smooth collaboration with other humans, as well as
+reduce the problem surface when debugging automated tools, like continuous
+integration systems.
 
 USAGE:
     confit [FLAGS] [OPTIONS]
@@ -40,10 +50,40 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
-    -c <checks>...            [possible values: commit, detached, git_prompt, local, merge, push, push_tag, stage, tag,
-                             track_files, track_remote]
-    -f, --format <format>    choose a format for output [default: summary]  [possible values: macros, debug, statusline,
-                             summary]
+    -c, --checks <checks>...     [possible values: commit, detached,
+        git_prompt, local, merge, push, push_tag, stage, tag, track_files, track_remote]
+    -f, --format <format>       choose a format for output [default: summary]
+        [possible values: summary, statusline, debug]
+
+EXAMPLES
+
+> confit --checks git_prompt --format statusline
+main|+3?2
+
+In a fish_prompt.fish:
+
+  set -l statusline (confit -c git_prompt -f statusline)
+  test $status -lt 128; and echo -n "⭠ "$statusline
+
+Two of the options to --checks are special: they select groups of checks:
+'git_prompt' (suitable for a command line prompt function) and 'local', which
+includes only those checks that don't require data collection from the git
+remote, which can be useful e.g. to avoid authenticating, or network delays.
+The checks performed on the workspace determine what data needs to be
+collected. You can select which checks to perform with the --checks flag.
+
+To aid machine use of this tool, its exit status is significant.
+
+Anything over 127 indicates errors running git (for instance: not in a git
+workspace), or rendering templates.
+
+Statuses less than or equal to 127 are the bitwise OR of the "status group" of
+any failing checks. Those groups are:
+
+   2: Local files uncommitted (unknown, only staged, etc.)
+   4: Commits unrecorded to the remote
+   8: Remote commits not pulled
+  16: Commit not tagged, or tag not pushed
 ```
 
 ## Background

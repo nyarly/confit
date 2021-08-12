@@ -1,0 +1,22 @@
+EXAMPLES
+
+> confit --checks git_prompt --format statusline
+main|+3?2
+
+In a fish_prompt.fish:
+
+  set -l statusline (confit -c git_prompt -f statusline)
+  test $status -lt 128; and echo -n "⭠ "$statusline
+
+Two of the options to --checks are special: they select groups of checks: 'git_prompt' (suitable for a command line prompt function) and 'local', which includes only those checks that don't require data collection from the git remote, which can be useful e.g. to avoid authenticating, or network delays.  The checks performed on the workspace determine what data needs to be collected. You can select which checks to perform with the --checks flag.
+
+To aid machine use of this tool, its exit status is significant.
+
+Anything over 127 indicates errors running git (for instance: not in a git workspace), or rendering templates.
+
+Statuses less than or equal to 127 are the bitwise OR of the "status group" of any failing checks. Those groups are:
+
+   2: Local files uncommitted (unknown, only staged, etc.)
+   4: Commits unrecorded to the remote
+   8: Remote commits not pulled
+  16: Commit not tagged, or tag not pushed

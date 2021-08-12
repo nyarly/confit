@@ -1,0 +1,4 @@
+
+Generates reports about the state of version control for the current workspace.  Git status is collected, and then a series of checks are run on it to establish that the contents of the workspace are stored, synchronized and recoverable.  The results of these checks are then formatted into a report via a selectable template.
+
+These reports help confirm that you've properly committed, pushed and tagged your work. This can help smooth collaboration with other humans, as well as reduce the problem surface when debugging automated tools, like continuous integration systems.
