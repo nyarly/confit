@@ -2,11 +2,12 @@ mod git;
 mod preserves;
 mod subcommands;
 
-use clap::{App, Arg, crate_authors, crate_version};
+use clap::{App, AppSettings, Arg, crate_authors, crate_version};
 use preserves::{Check, Summary, CheckList, datasource::{STATUS, REFS, REMOTE}};
 use tera::{Tera, Context};
 use lazy_static::lazy_static;
 use include_dir::{include_dir,Dir,DirEntry};
+use std::path::Path;
 
 lazy_static! {
   pub static ref TEMPLATES: Dir<'static> = include_dir!("src/templates");
@@ -35,6 +36,8 @@ fn main() -> ! {
     //.version(option_env!("CARGO_PKG_VERSION").unwrap_or("dev"))
     .version(crate_version!())
     .author(crate_authors!(", "))
+    .setting(AppSettings::VersionlessSubcommands)
+    .setting(AppSettings::ColoredHelp)
     .about("makes sure your work is properly preserved in git")
     .long_about(include_str!("about.txt"))
     .after_help(include_str!("after.txt"))
@@ -50,16 +53,24 @@ fn main() -> ! {
       .short("q")
       .help("suppress normal state summary; scripts can rely on the status code")
       .conflicts_with("format")
+      .conflicts_with("template")
     )
     .arg(
       Arg::with_name("format")
       .long("format")
       .short("f")
-      .help("choose a format for output")
-      .possible_values(TMPL.get_template_names()
-        .filter(|&n| n != "macros")
-        .collect::<Vec<_>>().as_slice())
+      .help(format!("choose a format for output [included: {}]",
+          TMPL.get_template_names()
+          .filter(|&n| n != "macros")
+          .collect::<Vec<_>>().as_slice().join(", ")).as_ref())
       .default_value("summary")
+    )
+    .arg(
+      Arg::with_name("template")
+      .long("template")
+      .short("T")
+      .help("provide a template source directory")
+      .takes_value(true)
     )
     .arg(
       Arg::with_name("checks")
@@ -128,10 +139,21 @@ fn main() -> ! {
       let mut context = Context::default();
       context.insert("items", &summary.items());
       context.insert("status", &summary.status);
-      print!("{}",
+      let body = if let Some(tdir) = opt.value_of("template") {
+        let tpath = Path::new(tdir).join("**");
+        let t = Tera::new(
+          tpath.to_str()
+          .ok_or("couldn't convert path to utf8")
+          .unwrap_or_else(&error_status(133))
+        ).unwrap_or_else(&error_status(132));
+        t.render(opt.value_of("format").expect("format has no value"), &context)
+          .unwrap_or_else(&error_status(131))
+      } else {
         TMPL.render(opt.value_of("format").expect("format has no value"), &context)
-        .unwrap_or_else(&error_status(131))
-      )
+          .unwrap_or_else(&error_status(131))
+      };
+
+      print!("{}", body);
     }
 
     std::process::exit(summary.exit_status())

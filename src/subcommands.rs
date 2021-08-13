@@ -8,7 +8,8 @@ pub(crate) mod write_templates {
 
   pub(crate) fn def() -> App<'static, 'static> {
     SubCommand::with_name("write-templates")
-      .about("writes the default templates out to a given directory")
+      .about("Writes the default templates out to a given directory")
+      .long_about(include_str!("about-write-templates.txt"))
       .arg(Arg::with_name("directory")
         .required(true))
   }
