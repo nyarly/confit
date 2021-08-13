@@ -1,20 +1,33 @@
 mod git;
 mod preserves;
+mod subcommands;
 
 use clap::{App, Arg, crate_authors, crate_version};
 use preserves::{Check, Summary, CheckList, datasource::{STATUS, REFS, REMOTE}};
 use tera::{Tera, Context};
 use lazy_static::lazy_static;
+use include_dir::{include_dir,Dir,DirEntry};
 
 lazy_static! {
+  pub static ref TEMPLATES: Dir<'static> = include_dir!("src/templates");
   pub static ref TMPL: Tera = {
     let mut tera = Tera::default();
-    tera.add_raw_template("macros", include_str!("templates/macros.txt")).expect("macros to parse");
-    tera.add_raw_template("summary", include_str!("templates/summary.txt")).expect("summary to parse");
-    tera.add_raw_template("statusline", include_str!("templates/statusline.txt")).expect("statusline to parse");
-    tera.add_raw_template("debug", include_str!("templates/debug.txt")).expect("debug to parse");
+    template_files(|tname, body| {
+      tera.add_raw_template(tname, body).expect(&*format!("{} to parse", tname));
+    });
     tera
   };
+}
+
+fn template_files(mut func: impl FnMut(&str, &str)) {
+  for entry in TEMPLATES.find("**/*.txt").expect("static dir") {
+    if let DirEntry::File(f) = entry {
+      let tpath = f.path().with_extension("");
+      let tname = tpath.to_str().expect("utf8 pathname");
+      let body = f.contents_utf8().expect(&*format!("{} contents", tname));
+      func(tname, body)
+    }
+  }
 }
 
 fn main() -> ! {
@@ -25,6 +38,7 @@ fn main() -> ! {
     .about("makes sure your work is properly preserved in git")
     .long_about(include_str!("about.txt"))
     .after_help(include_str!("after.txt"))
+    .subcommand(subcommands::write_templates::def())
     .arg(
       Arg::with_name("debug")
       .long("debug")
@@ -56,6 +70,17 @@ fn main() -> ! {
       .multiple(true)
       .possible_values(&Check::all_tags()))
     .get_matches();
+
+    if let (name, Some(sub_opt)) = opt.subcommand() {
+      match name {
+        "write-templates" => subcommands::write_templates::run(sub_opt),
+        _ => {
+          println!("Unknown subcommand: {}", name);
+        } //?
+      }
+
+      std::process::exit(0)
+    }
 
     let mut checks = if let Some(tags) = opt.values_of("checks") {
       Check::tagged_checks(tags)
