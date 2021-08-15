@@ -73,6 +73,15 @@ fn main() -> ! {
       .takes_value(true)
     )
     .arg(
+      Arg::with_name("json")
+      .long("json")
+      .short("j")
+      .help("emits json rather than human readable report")
+      .conflicts_with("format")
+      .conflicts_with("template")
+      .conflicts_with("quiet")
+    )
+    .arg(
       Arg::with_name("checks")
       .long("checks")
       .short("c")
@@ -134,26 +143,30 @@ fn main() -> ! {
     }
 
     if !opt.is_present("quiet") {
-      //println!("status: {}", serde_json::to_string(&summary.status)?);
-      //println!("items: {}", serde_json::to_string(&summary.items())?);
-      let mut context = Context::default();
-      context.insert("items", &summary.items());
-      context.insert("status", &summary.status);
-      let body = if let Some(tdir) = opt.value_of("template") {
-        let tpath = Path::new(tdir).join("**");
-        let t = Tera::new(
-          tpath.to_str()
-          .ok_or("couldn't convert path to utf8")
-          .unwrap_or_else(&error_status(133))
-        ).unwrap_or_else(&error_status(132));
-        t.render(opt.value_of("format").expect("format has no value"), &context)
-          .unwrap_or_else(&error_status(131))
+        let mut context = Context::default();
+        context.insert("items", &summary.items());
+        context.insert("status", &summary.status);
+      if opt.is_present("json") {
+        println!("{}", context.into_json());
       } else {
-        TMPL.render(opt.value_of("format").expect("format has no value"), &context)
-          .unwrap_or_else(&error_status(131))
-      };
+        //println!("status: {}", serde_json::to_string(&summary.status)?);
+        //println!("items: {}", serde_json::to_string(&summary.items())?);
+        let body = if let Some(tdir) = opt.value_of("template") {
+          let tpath = Path::new(tdir).join("**");
+          let t = Tera::new(
+            tpath.to_str()
+            .ok_or("couldn't convert path to utf8")
+            .unwrap_or_else(&error_status(133))
+          ).unwrap_or_else(&error_status(132));
+          t.render(opt.value_of("format").expect("format has no value"), &context)
+            .unwrap_or_else(&error_status(131))
+        } else {
+          TMPL.render(opt.value_of("format").expect("format has no value"), &context)
+            .unwrap_or_else(&error_status(131))
+        };
 
-      print!("{}", body);
+        print!("{}", body);
+      }
     }
 
     std::process::exit(summary.exit_status())
