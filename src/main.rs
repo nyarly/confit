@@ -3,11 +3,12 @@ mod preserves;
 mod subcommands;
 
 use clap::{App, AppSettings, Arg, crate_authors, crate_version};
-use preserves::{Check, Summary, CheckList, datasource::{STATUS, REFS, REMOTE}};
+use preserves::{Check, Summary, CheckList, datasource::Group};
 use tera::{Tera, Context};
 use lazy_static::lazy_static;
 use include_dir::{include_dir,Dir,DirEntry};
 use std::path::Path;
+use git::{LsRemote, GetStatus, ForEachRef};
 
 lazy_static! {
   pub static ref TEMPLATES: Dir<'static> = include_dir!("src/templates");
@@ -114,23 +115,9 @@ fn main() -> ! {
       println!("Required sources: {:?}", reqs)
     }
 
-    let ls_remote = if reqs.includes(REMOTE) {
-      git::ls_remote().unwrap_or_else(&error_status(128))
-    } else {
-      vec![]
-    };
-
-    let status = if reqs.includes(STATUS) {
-      git::status().unwrap_or_else(&error_status(129))
-    } else {
-      git::Status::default()
-    };
-
-    let for_each_ref = if reqs.includes(REFS) {
-      git::for_each_ref().unwrap_or_else(&error_status(130))
-    } else {
-      vec![]
-    };
+    let ls_remote = collect(LsRemote, reqs, 128);
+    let status = collect(GetStatus, reqs, 129);
+    let for_each_ref = collect(ForEachRef, reqs, 130);
 
     if opt.is_present("debug") {
       println!("{:#?}\n{:#?}\n{:#?}", status, for_each_ref, ls_remote);
@@ -170,6 +157,10 @@ fn main() -> ! {
     }
 
     std::process::exit(summary.exit_status())
+}
+
+fn collect<T>( provider: impl git::Provider<Data = T>, reqs: Group, errcode: i32,) -> T {
+  provider.collect(reqs).unwrap_or_else(&error_status(errcode))
 }
 
 fn error_status<T, E: core::fmt::Debug>(n: i32) -> impl Fn(E) -> T {

@@ -5,6 +5,8 @@ pub use parse::ls_remote::RefPair;
 pub use parse::status::Status;
 pub use parse::for_each_ref::RefLine;
 
+use crate::preserves::datasource::{self,Group};
+
 #[derive(Debug)]
 pub enum Error {
   Exec,
@@ -51,17 +53,83 @@ impl std::error::Error for Error {}
 
 type Result<O> = std::result::Result<O, Error>;
 
-pub fn ls_remote() -> Result<Vec<RefPair>> {
-  exec_and_parse(exec::ls_remote, parse::ls_remote, Error::LsRemote)
+pub trait Provider {
+  type Data;
+
+  fn get(&self) -> Result<Self::Data>;
+
+  fn empty(&self) -> Self::Data;
+
+  fn provides(&self) -> Group;
+
+  fn collect(&self, reqs: Group) -> Result<Self::Data> {
+    if reqs.includes(self.provides()) {
+      self.get()
+    } else {
+      Ok(self.empty())
+    }
+  }
+
+  fn example(&self) -> Self::Data {
+    self.empty()
+  }
 }
 
-pub fn status() -> Result<Status> {
-  exec_and_parse(exec::status, parse::status, Error::Status)
+pub struct LsRemote;
+
+impl Provider for LsRemote {
+  type Data = Vec<RefPair>;
+
+  fn get(&self) -> Result<Self::Data> {
+    exec_and_parse(exec::ls_remote, parse::ls_remote, Error::LsRemote)
+  }
+
+  fn empty(&self) -> Self::Data {
+    vec![]
+  }
+
+  fn provides(&self) -> Group {
+    datasource::REMOTE
+  }
 }
 
-pub fn for_each_ref() -> Result<Vec<RefLine>> {
-  exec_and_parse(exec::for_each_ref, parse::for_each_ref, Error::ForEachRef)
+pub struct GetStatus;
+
+impl Provider for GetStatus {
+  type Data = Status;
+
+  fn get(&self) -> Result<Self::Data> {
+    exec_and_parse(exec::status, parse::status, Error::Status)
+  }
+
+  fn empty(&self) -> Self::Data {
+    Status::default()
+  }
+
+  fn provides(&self) -> Group {
+    datasource::STATUS
+  }
 }
+
+pub struct ForEachRef;
+
+impl Provider for ForEachRef {
+  type Data = Vec<RefLine>;
+
+  fn get(&self) -> Result<Self::Data> {
+    exec_and_parse(exec::for_each_ref, parse::for_each_ref, Error::ForEachRef)
+  }
+
+  fn empty(&self) -> Self::Data {
+    vec![]
+  }
+
+  fn provides(&self) -> Group {
+    datasource::REFS
+  }
+}
+
+// collect(LsRemote, reqs).unwrap_or_exit(128)
 
 fn exec_and_parse<O, E, X, P>(exec: X, parse: P, e: E) -> Result<O>
 where
