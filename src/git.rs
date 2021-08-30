@@ -56,12 +56,11 @@ type Result<O> = std::result::Result<O, Error>;
 
 pub trait Provider {
   type Data;
+  const PROVIDES: Group;
 
   fn get(&self) -> Result<Self::Data>;
 
   fn empty(&self) -> Self::Data;
-
-  fn provides(&self) -> Group;
 
   fn collect(&self, reqs: Group) -> Result<Self::Data> {
     if reqs.includes(self.provides()) {
@@ -69,6 +68,10 @@ pub trait Provider {
     } else {
       Ok(self.empty())
     }
+  }
+
+  fn provides(&self) -> Group {
+    Self::PROVIDES
   }
 
   fn example(&self) -> Self::Data {
@@ -80,6 +83,7 @@ pub struct LsRemote;
 
 impl Provider for LsRemote {
   type Data = Vec<RefPair>;
+  const PROVIDES: Group = datasource::REMOTE;
 
   fn get(&self) -> Result<Self::Data> {
     exec_and_parse(exec::ls_remote, parse::ls_remote, Error::LsRemote)
@@ -88,16 +92,13 @@ impl Provider for LsRemote {
   fn empty(&self) -> Self::Data {
     vec![]
   }
-
-  fn provides(&self) -> Group {
-    datasource::REMOTE
-  }
 }
 
 pub struct GetStatus;
 
 impl Provider for GetStatus {
   type Data = Status;
+  const PROVIDES: Group = datasource::STATUS;
 
   fn get(&self) -> Result<Self::Data> {
     exec_and_parse(exec::status, parse::status, Error::Status)
@@ -105,10 +106,6 @@ impl Provider for GetStatus {
 
   fn empty(&self) -> Self::Data {
     Status::default()
-  }
-
-  fn provides(&self) -> Group {
-    datasource::STATUS
   }
 
   fn example(&self) -> Self::Data {
@@ -120,6 +117,7 @@ pub struct ForEachRef;
 
 impl Provider for ForEachRef {
   type Data = Vec<RefLine>;
+  const PROVIDES: Group = datasource::REFS;
 
   fn get(&self) -> Result<Self::Data> {
     exec_and_parse(exec::for_each_ref, parse::for_each_ref, Error::ForEachRef)
@@ -127,10 +125,6 @@ impl Provider for ForEachRef {
 
   fn empty(&self) -> Self::Data {
     vec![]
-  }
-
-  fn provides(&self) -> Group {
-    datasource::REFS
   }
 }
 

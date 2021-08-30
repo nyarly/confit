@@ -9,6 +9,9 @@ use lazy_static::lazy_static;
 use include_dir::{include_dir,Dir,DirEntry};
 use std::path::Path;
 use git::{LsRemote, GetStatus, ForEachRef};
+use fake::{Fake, Faker};
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 lazy_static! {
   pub static ref TEMPLATES: Dir<'static> = include_dir!("src/templates");
@@ -122,10 +125,15 @@ fn main() -> ! {
     }
 
     let summary = if opt.is_present("example") {
+      let seed = [
+        1, 0, 0, 0, 23, 0, 0, 0, 200, 1, 0, 0, 210, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0,
+      ];
+      let ref mut r = StdRng::from_seed(seed);
       Summary::new(
-        example_for(LsRemote),
-        example_for(GetStatus),
-        example_for(ForEachRef),
+        fake::vec![_; 5..20],
+        Faker.fake_with_rng(r),
+        fake::vec![_; 5..20],
         Check::all_checks()
       )
     } else {
@@ -172,10 +180,6 @@ fn main() -> ! {
     }
 
     std::process::exit(summary.exit_status())
-}
-
-fn example_for<T>(provider: impl git::Provider<Data =T>) -> T {
-  provider.example()
 }
 
 fn collect<T>( provider: impl git::Provider<Data = T>, reqs: Group, errcode: i32,) -> T {

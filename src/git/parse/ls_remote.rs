@@ -6,9 +6,10 @@ use nom::{
     IResult,
 };
 
+use fake::{Dummy,Fake};
 use super::{filepath, settle_parse_result, sha, ObjectName, WorkPath};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Dummy)]
 pub struct RefPair {
     pub refname: ObjectName,
     pub path: WorkPath,

@@ -13,7 +13,7 @@ use std::{
   path::PathBuf
 };
 use serde::Serialize;
-use fake::{Dummy,Fake,Faker,PathFaker};
+use fake::{Dummy,Fake,Faker,PathFaker,faker::company::en::{BsVerb,BsNoun}};
 use rand::Rng;
 
 pub mod for_each_ref;
@@ -33,8 +33,15 @@ impl From<&str> for ObjectName {
   }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Dummy)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct RefName(String);
+
+impl Dummy<Faker> for RefName {
+  fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
+    let words: Vec<String> = vec![BsVerb().fake_with_rng(rng), BsNoun().fake_with_rng(rng)];
+    RefName(words.join("-"))
+  }
+}
 
 impl From<&str> for RefName {
   fn from(s: &str) -> Self {
@@ -77,9 +84,14 @@ impl Dummy<Faker> for WorkPath {
   }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Serialize, Dummy)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Serialize)]
 pub struct TrackingCounts(pub u64, pub u64);
 
+impl Dummy<Faker> for TrackingCounts {
+  fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
+    TrackingCounts((0..10).fake_with_rng(rng), (0..10).fake_with_rng(rng))
+  }
+}
 
 #[derive(Debug)]
 pub enum Err<I> {

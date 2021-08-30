@@ -8,6 +8,7 @@ use nom::{
     IResult,
 };
 
+use fake::{Dummy,Fake};
 use super::{is_digit, settle_parse_result, sha, ObjectName, RefName, TrackingCounts};
 use chrono::{DateTime, Utc};
 
@@ -17,7 +18,7 @@ use chrono::{DateTime, Utc};
  * '8558b6934276f1b9966c01f7b3e5aeea2902742d' 'commit' 'refs/heads/multiple_provisioning' 'refs/remotes/origin/multiple_provisioning' 'origin' '[ahead 1]' 'Judson <nyarly@gmail.com> 1572973200 -0800'
  */
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Dummy)]
 pub struct RefLine {
     pub object_name: ObjectName,
     pub referred_object: Option<ObjectName>,
@@ -30,7 +31,7 @@ pub struct RefLine {
 }
 
 // XXX review pulling this up to RefLine
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Dummy)]
 pub enum ObjectType {
     Blob,
     Tree,
@@ -38,13 +39,13 @@ pub enum ObjectType {
     Tag,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Dummy)]
 pub struct RemoteRef {
     pub remote: String,
     pub refname: RefName,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Dummy)]
 pub enum TrackSync {
     Untracked,
     Track {
