@@ -8,13 +8,14 @@ use nom::{
     sequence::{delimited, preceded, separated_pair, terminated, tuple},
     IResult,
 };
+use fake::{Dummy,Fake};
 use serde::Serialize;
 use std::array::TryFromSliceError;
 use std::convert::TryFrom;
 
 use super::{filepath, settle_parse_result, sha, ObjectName, RefName, TrackingCounts, WorkPath};
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Dummy)]
 pub struct Status {
     pub branch: Option<Branch>,
     pub lines: Vec<StatusLine>,
@@ -29,7 +30,7 @@ impl Default for Status {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Dummy)]
 pub struct Branch {
     pub oid: Oid,
     pub head: Head,
@@ -37,7 +38,7 @@ pub struct Branch {
     pub commits: Option<TrackingCounts>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Dummy)]
 #[serde(rename_all = "lowercase")]
 pub enum StatusLine {
     One {
@@ -82,44 +83,44 @@ pub enum StatusLine {
     },
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Dummy)]
 #[serde(rename_all = "lowercase")]
 pub enum Oid {
     Initial,
     Commit(ObjectName),
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Dummy)]
 #[serde(rename_all = "lowercase")]
 pub enum Head {
     Detached,
     Branch(RefName),
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Dummy)]
 pub struct Mode([u8; 6]);
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Dummy)]
 #[serde(rename_all = "lowercase")]
 pub enum SubmoduleStatus {
     Not,
     Is(bool, bool, bool),
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Dummy)]
 #[serde(rename_all = "lowercase")]
 pub enum ChangeScore {
     Rename(u8),
     Copy(u8),
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Dummy)]
 pub struct StatusPair {
     pub staged: LineStatus,
     pub unstaged: LineStatus,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Dummy)]
 #[serde(rename_all = "lowercase")]
 pub enum LineStatus {
     Unmodified,

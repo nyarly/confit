@@ -20,3 +20,5 @@ anyhow = "^1.0.0"
 tera = { version = "^1.11.0", default-features = false }
 lazy_static = "^1.4.0"
 include_dir = "^0.6.1"
+fake = { version = "^2.4.1", features = ['derive'] }
+rand = "^0.8.4"

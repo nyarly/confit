@@ -5,6 +5,7 @@ pub use parse::ls_remote::RefPair;
 pub use parse::status::Status;
 pub use parse::for_each_ref::RefLine;
 
+use fake::{Fake, Faker};
 use crate::preserves::datasource::{self,Group};
 
 #[derive(Debug)]
@@ -108,6 +109,10 @@ impl Provider for GetStatus {
 
   fn provides(&self) -> Group {
     datasource::STATUS
+  }
+
+  fn example(&self) -> Self::Data {
+    Faker.fake()
   }
 }
 

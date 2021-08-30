@@ -83,6 +83,12 @@ fn main() -> ! {
       .conflicts_with("quiet")
     )
     .arg(
+      Arg::with_name("example")
+      .long("example")
+      .help("generates example output for template development")
+      .conflicts_with("checks")
+    )
+    .arg(
       Arg::with_name("checks")
       .long("checks")
       .short("c")
@@ -115,15 +121,24 @@ fn main() -> ! {
       println!("Required sources: {:?}", reqs)
     }
 
-    let ls_remote = collect(LsRemote, reqs, 128);
-    let status = collect(GetStatus, reqs, 129);
-    let for_each_ref = collect(ForEachRef, reqs, 130);
+    let summary = if opt.is_present("example") {
+      Summary::new(
+        example_for(LsRemote),
+        example_for(GetStatus),
+        example_for(ForEachRef),
+        Check::all_checks()
+      )
+    } else {
+      let ls_remote = collect(LsRemote, reqs, 128);
+      let status = collect(GetStatus, reqs, 129);
+      let for_each_ref = collect(ForEachRef, reqs, 130);
 
-    if opt.is_present("debug") {
-      println!("{:#?}\n{:#?}\n{:#?}", status, for_each_ref, ls_remote);
-    }
+      if opt.is_present("debug") {
+        println!("{:#?}\n{:#?}\n{:#?}", status, for_each_ref, ls_remote);
+      }
 
-    let summary = Summary::new(ls_remote, status, for_each_ref, checks);
+      Summary::new(ls_remote, status, for_each_ref, checks)
+    };
 
     if opt.is_present("debug") {
       println!("will exit: {}", summary.exit_status())
@@ -157,6 +172,10 @@ fn main() -> ! {
     }
 
     std::process::exit(summary.exit_status())
+}
+
+fn example_for<T>(provider: impl git::Provider<Data =T>) -> T {
+  provider.example()
 }
 
 fn collect<T>( provider: impl git::Provider<Data = T>, reqs: Group, errcode: i32,) -> T {

@@ -10,8 +10,11 @@ use std::{
   error::Error,
   ffi::OsString,
   fmt::{self, Debug, Display},
+  path::PathBuf
 };
 use serde::Serialize;
+use fake::{Dummy,Fake,Faker,PathFaker};
+use rand::Rng;
 
 pub mod for_each_ref;
 pub mod ls_remote;
@@ -21,7 +24,7 @@ pub use for_each_ref::parse as for_each_ref;
 pub use ls_remote::parse as ls_remote;
 pub use status::parse as status;
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Dummy)]
 pub struct ObjectName(String);
 
 impl From<&str> for ObjectName {
@@ -30,7 +33,7 @@ impl From<&str> for ObjectName {
   }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Dummy)]
 pub struct RefName(String);
 
 impl From<&str> for RefName {
@@ -61,7 +64,20 @@ impl Into<String> for WorkPath {
   }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Serialize)]
+impl Dummy<Faker> for WorkPath {
+  fn dummy_with_rng<R: Rng + ?Sized>(_: &Faker, rng: &mut R) -> Self {
+    WorkPath(OsString::from(PathFaker::new(
+      &["src", "lib"],
+      &["bit", "bob", "foo", "bar"],
+      &["rs", "c", "js", "rb", "go"],
+      4
+    ).fake_with_rng::<PathBuf, _>(rng)
+        .to_string_lossy()
+        .into_owned()))
+  }
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Serialize, Dummy)]
 pub struct TrackingCounts(pub u64, pub u64);
 
 

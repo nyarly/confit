@@ -7,6 +7,7 @@ pkgs.mkShell {
 
   buildInputs = with pkgs; [
     cargo
+    rls
     yj
     jq
   ] ++ lib.optionals stdenv.isDarwin [
