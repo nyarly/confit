@@ -48,8 +48,8 @@ pub mod datasource {
 
 pub struct Summary<'a> {
   pub status: git::Status,
-  ls_remote: Vec<git::RefPair>,
-  for_each_ref: Vec<git::RefLine>,
+  pub(crate) ls_remote: Vec<git::RefPair>,
+  pub(crate) for_each_ref: Vec<git::RefLine>,
   checks: Vec<&'a Check>,
 }
 

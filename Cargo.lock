@@ -140,6 +140,7 @@ dependencies = [
  "chrono",
  "clap",
  "fake",
+ "getrandom",
  "include_dir",
  "lazy_static",
  "nom",

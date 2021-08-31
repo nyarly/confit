@@ -10,8 +10,9 @@ use include_dir::{include_dir,Dir,DirEntry};
 use std::path::Path;
 use git::{LsRemote, GetStatus, ForEachRef};
 use fake::{Fake, Faker};
-use rand::rngs::StdRng;
+use rand::{Rng,rngs::StdRng};
 use rand::SeedableRng;
+use getrandom::getrandom;
 
 lazy_static! {
   pub static ref TEMPLATES: Dir<'static> = include_dir!("src/templates");
@@ -92,6 +93,13 @@ fn main() -> ! {
       .conflicts_with("checks")
     )
     .arg(
+      Arg::with_name("seed-file")
+      .long("seed-file")
+      .help("reads (or writes) the example seed from (or to) a file")
+      .requires("example")
+      .takes_value(true)
+    )
+    .arg(
       Arg::with_name("checks")
       .long("checks")
       .short("c")
@@ -125,28 +133,25 @@ fn main() -> ! {
     }
 
     let summary = if opt.is_present("example") {
-      let seed = [
-        1, 0, 0, 0, 23, 0, 0, 0, 200, 1, 0, 0, 210, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0,
-      ];
-      let ref mut r = StdRng::from_seed(seed);
+      let mut r = load_rng(opt.value_of("seed-file"));
       Summary::new(
         fake::vec![_; 5..20],
-        Faker.fake_with_rng(r),
+        Faker.fake_with_rng(&mut r),
         fake::vec![_; 5..20],
         Check::all_checks()
       )
     } else {
-      let ls_remote = collect(LsRemote, reqs, 128);
-      let status = collect(GetStatus, reqs, 129);
-      let for_each_ref = collect(ForEachRef, reqs, 130);
-
-      if opt.is_present("debug") {
-        println!("{:#?}\n{:#?}\n{:#?}", status, for_each_ref, ls_remote);
-      }
-
-      Summary::new(ls_remote, status, for_each_ref, checks)
+      Summary::new(
+        collect(LsRemote, reqs, 128),
+        collect(GetStatus, reqs, 129),
+        collect(ForEachRef, reqs, 130),
+        checks
+      )
     };
+
+    if opt.is_present("debug") {
+      println!("{:#?}\n{:#?}\n{:#?}", summary.status, summary.for_each_ref, summary.ls_remote);
+    }
 
     if opt.is_present("debug") {
       println!("will exit: {}", summary.exit_status())
@@ -191,6 +196,27 @@ fn error_status<T, E: core::fmt::Debug>(n: i32) -> impl Fn(E) -> T {
     println!("{:?}", e);
     std::process::exit(n)
   }
+}
+
+fn load_rng(seedpath: Option<&str>) -> impl Rng {
+  let ref mut seed = [0; 32];
+  use std::fs::File;
+  use std::io::{Read,Write};
+  match seedpath {
+    None => getrandom(seed).unwrap_or_else(&error_status(131)),
+    Some(path) => {
+      match File::open(path) {
+        Ok(mut f) => f.read(seed).unwrap_or_else(&error_status(132)),
+        Err(_) => {
+          getrandom(seed).unwrap_or_else(&error_status(133));
+          let mut f = File::create(path).unwrap_or_else(&error_status(134));
+          f.write(seed).unwrap_or_else(&error_status(135))
+        }
+      };
+    }
+  }
+
+  StdRng::from_seed(*seed)
 }
 
 /* Stages of execution:
