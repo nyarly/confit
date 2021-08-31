@@ -135,9 +135,9 @@ fn main() -> ! {
     let summary = if opt.is_present("example") {
       let mut r = load_rng(opt.value_of("seed-file"));
       Summary::new(
-        fake::vec![_; 5..20],
+        (Faker, 0..10).fake_with_rng(&mut r),
         Faker.fake_with_rng(&mut r),
-        fake::vec![_; 5..20],
+        (Faker, 0..10).fake_with_rng(&mut r),
         Check::all_checks()
       )
     } else {
