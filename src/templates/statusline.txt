@@ -1,6 +1,6 @@
 {% import "macros" as macros %}
 {% if status.branch.head.branch is defined -%}
-{{ status.branch.head.branch }}|
+{{ status.branch.head.branch | truncate(length=6) }}|
 {%- endif -%}
 {%- set good = true -%}
 {%- for item in items -%}
