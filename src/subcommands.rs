@@ -1,10 +1,9 @@
-
 pub(crate) mod write_templates {
   use clap::{App, SubCommand, Arg, ArgMatches};
   use std::path::Path;
   use std::fs::File;
   use std::io::Write;
-  use crate::{template_files, error_status};
+  use crate::{TEMPLATES,error_status};
 
   pub(crate) fn def() -> App<'static, 'static> {
     SubCommand::with_name("write-templates")
@@ -22,11 +21,11 @@ pub(crate) mod write_templates {
       std::process::exit(1)
     }
 
-    template_files(|name, body| {
+    for (name, body) in &*TEMPLATES {
       let tpath = dir.join(name);
       println!("{:?}", tpath);
       let mut tfile = File::create(tpath).unwrap_or_else(&error_status(1));
       tfile.write(body.as_bytes()).unwrap_or_else(&error_status(1));
-    })
+    }
   }
 }

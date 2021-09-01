@@ -15,25 +15,22 @@ use rand::SeedableRng;
 use getrandom::getrandom;
 
 lazy_static! {
-  pub static ref TEMPLATES: Dir<'static> = include_dir!("src/templates");
+  pub static ref TEMPLATE_DIR: Dir<'static> = include_dir!("src/templates");
+  pub static ref TEMPLATES: Vec<(String, &'static str)> = {
+    TEMPLATE_DIR.find("**/*.txt").expect("static dir")
+      .filter_map(|entry| match entry { DirEntry::File(f) => Some(f), _ => None })
+      .map(|f| {
+        let tpath = f.path().with_extension("");
+        let tname = tpath.to_str().expect("utf8 pathname").into();
+        let body = f.contents_utf8().expect(&*format!("{} contents", tname));
+        (tname, body)
+      }).collect()
+  };
   pub static ref TMPL: Tera = {
     let mut tera = Tera::default();
-    template_files(|tname, body| {
-      tera.add_raw_template(tname, body).expect(&*format!("{} to parse", tname));
-    });
+    tera.add_raw_templates((*TEMPLATES).clone()).expect(&*format!("templates to parse"));
     tera
   };
-}
-
-fn template_files(mut func: impl FnMut(&str, &str)) {
-  for entry in TEMPLATES.find("**/*.txt").expect("static dir") {
-    if let DirEntry::File(f) = entry {
-      let tpath = f.path().with_extension("");
-      let tname = tpath.to_str().expect("utf8 pathname");
-      let body = f.contents_utf8().expect(&*format!("{} contents", tname));
-      func(tname, body)
-    }
-  }
 }
 
 fn main() -> ! {
