@@ -3,7 +3,7 @@ pub(crate) mod write_templates {
   use std::path::Path;
   use std::fs::File;
   use std::io::Write;
-  use crate::{TEMPLATES,error_status};
+  use crate::{TEMPLATES,with_status,ErrorStatus};
 
   pub(crate) fn def() -> App<'static, 'static> {
     SubCommand::with_name("write-templates")
@@ -13,7 +13,7 @@ pub(crate) mod write_templates {
         .required(true))
   }
 
-  pub(crate) fn run(args: &ArgMatches) {
+  pub(crate) fn run(args: &ArgMatches) -> Result<i32, ErrorStatus> {
     let dirname = args.value_of("directory").expect("directory is required");
     let dir = Path::new(dirname);
     if !dir.is_dir() {
@@ -24,8 +24,9 @@ pub(crate) mod write_templates {
     for (name, body) in &*TEMPLATES {
       let tpath = dir.join(name);
       println!("{:?}", tpath);
-      let mut tfile = File::create(tpath).unwrap_or_else(&error_status(1));
-      tfile.write(body.as_bytes()).unwrap_or_else(&error_status(1));
+      let mut tfile = File::create(tpath).map_err(&with_status(1))?;
+      tfile.write(body.as_bytes()).map_err(&with_status(1))?;
     }
+    Ok(0)
   }
 }
